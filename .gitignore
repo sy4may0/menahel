@@ -1,0 +1,4 @@
+/target
+/miscs
+.env
+env.sh

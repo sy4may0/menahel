@@ -1,0 +1,15 @@
+[package]
+name = "menahel"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.98"
+chrono = "0.4.41"
+email_address = "0.2.9"
+regex = "1.11.1"
+serde = { version = "1.0.219", features = [ "derive" ]}
+sha2 = "0.10.9"
+sqlx = { version = "0.8", features = [ "runtime-tokio", "sqlite-unbundled", "derive", "macros", "chrono", "uuid" ] }
+tokio = { version = "1", features = ["full"] }
+
