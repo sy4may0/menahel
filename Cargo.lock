@@ -185,6 +185,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-link",
 ]
@@ -805,6 +806,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "email_address",
+ "rand",
  "regex",
  "serde",
  "sha2",

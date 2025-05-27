@@ -2,3 +2,5 @@
 mod user_test;
 #[cfg(test)]
 mod project_test;
+#[cfg(test)]
+mod task_test;
