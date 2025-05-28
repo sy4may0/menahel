@@ -1,7 +1,7 @@
 use crate::models::User;
 use sqlx::{Pool, Sqlite};
 use anyhow::Result;
-use crate::utils::{validate_user_id, validate_user_name, validate_user_email, validate_user_password};
+use crate::repository::validations::{validate_user_id, validate_user_name, validate_user_email, validate_user_password};
 use crate::errors::messages::{get_error_message, ErrorKey};
 use crate::errors::db_error::DBAccessError;
 
@@ -114,7 +114,7 @@ impl UserRepository {
         .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserDeleteFailedByIdNotFound, e.to_string()))))?;
 
         if result.rows_affected() == 0 {
-            return Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserDeleteFailedByIdNotFound, format!("ID = {}", id)))));
+            return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::UserDeleteFailedByIdNotFound, format!("ID = {}", id))));
         }
 
         Ok(())

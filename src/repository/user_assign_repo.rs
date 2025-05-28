@@ -5,7 +5,7 @@ use crate::errors::db_error::DBAccessError;
 use crate::errors::messages::{get_error_message, ErrorKey};
 use crate::repository::user_repo::UserRepository;
 use crate::repository::task_repo::TaskRepository;
-use crate::utils::{validate_user_assign_user_id, validate_user_assign_task_id};
+use crate::repository::validations::{validate_user_assign_user_id, validate_user_assign_task_id};
 
 pub struct UserAssignRepository {
     pool: Pool<Sqlite>,
@@ -23,11 +23,11 @@ impl UserAssignRepository {
     async fn validate_target_user_and_task(&self, user_assign: &UserAssign) -> Result<(), DBAccessError> {
         let user = self.user_repo.get_user_by_id(user_assign.user_id).await?;
         if user.is_none() {
-            return Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserAssignUserIdNotFound, format!("ID = {}", user_assign.user_id)))));
+            return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::UserAssignUserIdNotFound, format!("ID = {}", user_assign.user_id))));
         }
         let task = self.task_repo.get_task_by_id(user_assign.task_id).await?;
         if task.is_none() {
-            return Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserAssignTaskIdNotFound, format!("ID = {}", user_assign.task_id)))));
+            return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::UserAssignTaskIdNotFound, format!("ID = {}", user_assign.task_id))));
         }
         Ok(())
     }
@@ -35,11 +35,11 @@ impl UserAssignRepository {
     async fn validate_user_assign_to_not_max_level_task(&self, user_assign: &UserAssign) -> Result<(), DBAccessError> {
         let task = self.task_repo.get_task_by_id(user_assign.task_id).await?;
         if task.is_none() {
-            return Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserAssignTaskIdNotFound, format!("ID = {}", user_assign.task_id)))));
+            return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::UserAssignTaskIdNotFound, format!("ID = {}", user_assign.task_id))));
         }
 
         if task.unwrap().level != get_max_task_level() as i64 {
-            return Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserAssignToNotMaxLevelTask, format!("ID = {}", user_assign.task_id)))));
+            return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::UserAssignToNotMaxLevelTask, format!("ID = {}", user_assign.task_id))));
         }
 
         Ok(())
@@ -48,7 +48,7 @@ impl UserAssignRepository {
     async fn validate_user_assign_same_user_assign_exists(&self, user_assign: &UserAssign) -> Result<(), DBAccessError> {
         let user_assigns = self.get_user_assign_by_task_id(user_assign.task_id).await?;
         if user_assigns.iter().any(|assign| assign.user_id == user_assign.user_id) {
-            return Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserAssignSameUserAssignExists, format!("ID = {}", user_assign.task_id)))));
+            return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::UserAssignSameUserAssignExists, format!("ID = {}", user_assign.task_id))));
         }
         Ok(())
     }
@@ -187,7 +187,7 @@ impl UserAssignRepository {
         .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserAssignDeleteFailed, e.to_string()))))?;
 
         if result.rows_affected() == 0 {
-            return Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserAssignDeleteFailedByIdNotFound, format!("ID = {}", id)))));
+            return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::UserAssignDeleteFailedByIdNotFound, format!("ID = {}", id))));
         }
 
         Ok(())

@@ -1,7 +1,7 @@
 use crate::models::Project;
 use sqlx::{Pool, Sqlite};
 use anyhow::Result;
-use crate::utils::{validate_project_id, validate_project_name};
+use crate::repository::validations::{validate_project_id, validate_project_name};
 use crate::errors::db_error::DBAccessError;
 use crate::errors::messages::{get_error_message, ErrorKey};
 
@@ -108,7 +108,7 @@ impl ProjectRepository {
         .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::ProjectDeleteFailedByIdNotFound, e.to_string()))))?;
 
         if result.rows_affected() == 0 {
-            return Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::ProjectDeleteFailedByIdNotFound, format!("ID = {}", id)))));
+            return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::ProjectDeleteFailedByIdNotFound, format!("ID = {}", id))));
         }
 
         Ok(())

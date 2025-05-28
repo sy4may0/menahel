@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::utils::validate_user_password;
+use crate::repository::validations::validate_user_password;
 use sha2::{Sha256, Digest};
 
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize, PartialEq, Eq)]

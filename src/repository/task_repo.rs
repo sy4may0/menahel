@@ -3,7 +3,7 @@ use crate::repository::project_repo::ProjectRepository;
 use sqlx::{Pool, Sqlite};
 use anyhow::Result;
 use chrono::{Utc};
-use crate::utils::{
+use crate::repository::validations::{
     validate_task_id, validate_task_project_id, validate_task_parent_id, validate_task_level, 
     validate_task_status, validate_task_name, 
     validate_task_description, validate_task_unix_timestamp, 
@@ -29,33 +29,33 @@ impl TaskRepository {
         Self { pool, project_repo }
     }
 
-    async fn validate_project_id_is_exist(&self, project_id: i64) -> Result<()> {
+    async fn validate_project_id_is_exist(&self, project_id: i64) -> Result<(), DBAccessError> {
         let project = self.project_repo.get_project_by_id(project_id).await?;
         if project.is_none() {
-            return Err(anyhow::anyhow!(get_error_message(ErrorKey::TaskProjectIdNotFound, format!("ID = {}", project_id))));
+            return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::TaskProjectIdNotFound, format!("ID = {}", project_id))));
         }
         Ok(())
     }
 
-    async fn validate_parent_relation(&self, parent_id: Option<i64>, level: i64, self_id: Option<i64>) -> Result<()> {
+    async fn validate_parent_relation(&self, parent_id: Option<i64>, level: i64, self_id: Option<i64>) -> Result<(), DBAccessError> {
         if parent_id.is_none() {
             if level != 0 {
-                return Err(anyhow::anyhow!(get_error_message(ErrorKey::TaskNoParentIdOnNonMajorTask, format!("Level = {}", level))));
+                return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::TaskNoParentIdOnNonMajorTask, format!("Level = {}", level))));
             }
             return Ok(());
         } else {
             let parent_task = self.get_task_by_id(parent_id.unwrap()).await?;
             if parent_task.is_none() {
-                return Err(anyhow::anyhow!(get_error_message(ErrorKey::TaskParentIdNotFound, format!("ID = {}", parent_id.unwrap()))));
+                return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::TaskParentIdNotFound, format!("ID = {}", parent_id.unwrap()))));
             }
             let parent_task = parent_task.unwrap();
             if parent_task.level != level - 1 {
-                return Err(anyhow::anyhow!(get_error_message(ErrorKey::TaskParentLevelInvalid, format!("Level = {}, Parent Level = {}", level, parent_task.level))));
+                return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::TaskParentLevelInvalid, format!("Level = {}, Parent Level = {}", level, parent_task.level))));
             }
         }
 
         if self_id.is_some() && parent_id.is_some() && parent_id.unwrap() == self_id.unwrap() {
-            return Err(anyhow::anyhow!(get_error_message(ErrorKey::TaskParentIdCannotBeSameAsTaskId, format!("ID = {}", parent_id.unwrap()))));
+            return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::TaskParentIdCannotBeSameAsTaskId, format!("ID = {}", parent_id.unwrap()))));
         }
 
         Ok(())
@@ -282,7 +282,7 @@ impl TaskRepository {
 
     pub async fn update_task(&self, task: Task) -> Result<Task, DBAccessError> {
         if task.id.is_none() {
-            return Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::TaskIdInvalid, format!("ID = {}", task.id.unwrap())))));
+            return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::TaskIdInvalid, format!("ID = {}", task.id.unwrap()))));
         }
 
         validate_task_id(task.id)?;
@@ -335,7 +335,7 @@ impl TaskRepository {
         .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::TaskDeleteFailedByIdNotFound, e.to_string()))))?;
 
         if result.rows_affected() == 0 {
-            return Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::TaskDeleteFailedByIdNotFound, format!("ID = {}", id)))));
+            return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::TaskDeleteFailedByIdNotFound, format!("ID = {}", id))));
         }
 
         Ok(())

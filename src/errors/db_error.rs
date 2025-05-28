@@ -14,6 +14,9 @@ pub enum DBAccessError {
 
     #[error("ResourceExhaustedError: {0}")]
     ResourceExhaustedError(String),
+
+    #[error("ValidationError: {0}")]
+    ValidationError(String),
 }
 
 impl DBAccessError {
