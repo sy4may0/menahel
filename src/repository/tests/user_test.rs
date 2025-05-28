@@ -599,4 +599,132 @@ mod user_test {
         let result = user_repo.update_user(updated_user).await;
         assert!(result.is_err());
     }
+
+    #[sqlx::test]
+    async fn test_user_repo_create_user_with_negative_id(pool: SqlitePool) {
+        let user_repo = UserRepository::new(pool);
+        let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
+
+        let user = User {
+            id: Some(-1),
+            username: format!("negative_id_test_{}", now),
+            email: format!("negative_id_test_{}@test.com", now),
+            password_hash: build_password(),
+        };
+
+        let result = user_repo.create_user(user).await;
+        assert!(result.is_err());
+    }
+
+    #[sqlx::test]
+    async fn test_user_repo_create_user_with_zero_id(pool: SqlitePool) {
+        let user_repo = UserRepository::new(pool);
+        let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
+
+        let user = User {
+            id: Some(0),
+            username: format!("zero_id_test_{}", now),
+            email: format!("zero_id_test_{}@test.com", now),
+            password_hash: build_password(),
+        };
+
+        let result = user_repo.create_user(user).await;
+        assert!(result.is_err());
+    }
+
+    #[sqlx::test]
+    async fn test_user_repo_create_user_with_dot_in_username(pool: SqlitePool) {
+        let user_repo = UserRepository::new(pool);
+        let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
+
+        let user = User {
+            id: None,
+            username: format!("dot.test.{}", now),
+            email: format!("dot_test_{}@test.com", now),
+            password_hash: build_password(),
+        };
+
+        let result = user_repo.create_user(user).await;
+        assert!(result.is_ok());
+    }
+
+    #[sqlx::test]
+    async fn test_user_repo_create_user_with_underscore_in_username(pool: SqlitePool) {
+        let user_repo = UserRepository::new(pool);
+        let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
+
+        let user = User {
+            id: None,
+            username: format!("underscore_test_{}", now),
+            email: format!("underscore_test_{}@test.com", now),
+            password_hash: build_password(),
+        };
+
+        let result = user_repo.create_user(user).await;
+        assert!(result.is_ok());
+    }
+
+    #[sqlx::test]
+    async fn test_user_repo_create_user_with_numeric_username(pool: SqlitePool) {
+        let user_repo = UserRepository::new(pool);
+        let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
+
+        let user = User {
+            id: None,
+            username: format!("1234567890_{}", now),
+            email: format!("numeric_test_{}@test.com", now),
+            password_hash: build_password(),
+        };
+
+        let result = user_repo.create_user(user).await;
+        assert!(result.is_ok());
+    }
+
+    #[sqlx::test]
+    async fn test_user_repo_create_user_with_long_domain(pool: SqlitePool) {
+        let user_repo = UserRepository::new(pool);
+        let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
+
+        let user = User {
+            id: None,
+            username: format!("long_domain_test_{}", now),
+            email: format!("test@{}", "a".repeat(128)),
+            password_hash: build_password(),
+        };
+
+        let result = user_repo.create_user(user).await;
+        assert!(result.is_err());
+    }
+
+    #[sqlx::test]
+    async fn test_user_repo_create_user_with_long_local_part(pool: SqlitePool) {
+        let user_repo = UserRepository::new(pool);
+        let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
+
+        let user = User {
+            id: None,
+            username: format!("long_local_test_{}", now),
+            email: format!("{}@test.com", "a".repeat(128)),
+            password_hash: build_password(),
+        };
+
+        let result = user_repo.create_user(user).await;
+        assert!(result.is_err());
+    }
+
+    #[sqlx::test]
+    async fn test_user_repo_create_user_with_special_chars_in_email(pool: SqlitePool) {
+        let user_repo = UserRepository::new(pool);
+        let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
+
+        let user = User {
+            id: None,
+            username: format!("special_email_test_{}", now),
+            email: format!("test!@#$%^&*()_{}@test.com", now),
+            password_hash: build_password(),
+        };
+
+        let result = user_repo.create_user(user).await;
+        assert!(result.is_err());
+    }
 }

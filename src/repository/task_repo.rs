@@ -1,10 +1,20 @@
 use crate::models::{Task, TaskFilter};
+use crate::repository::project_repo::ProjectRepository;
 use sqlx::{Pool, Sqlite};
 use anyhow::Result;
 use chrono::{Utc};
+use crate::utils::{
+    validate_task_id, validate_task_project_id, validate_task_parent_id, validate_task_level, 
+    validate_task_status, validate_task_name, 
+    validate_task_description, validate_task_unix_timestamp, 
+    validate_task_unix_timestamp_or_none
+};
+use crate::errors::db_error::DBAccessError;
+use crate::errors::messages::{get_error_message, ErrorKey};
 
 pub struct TaskRepository {
     pool: Pool<Sqlite>,
+    project_repo: ProjectRepository,
 }
 
 #[derive(Debug)]
@@ -15,10 +25,55 @@ enum FilterValue {
 
 impl TaskRepository {
     pub fn new(pool: Pool<Sqlite>) -> Self {
-        Self { pool }
+        let project_repo = ProjectRepository::new(pool.clone());
+        Self { pool, project_repo }
     }
 
-    pub async fn create_task(&self, task: Task) -> Result<Task> {
+    async fn validate_project_id_is_exist(&self, project_id: i64) -> Result<()> {
+        let project = self.project_repo.get_project_by_id(project_id).await?;
+        if project.is_none() {
+            return Err(anyhow::anyhow!(get_error_message(ErrorKey::TaskProjectIdNotFound, format!("ID = {}", project_id))));
+        }
+        Ok(())
+    }
+
+    async fn validate_parent_relation(&self, parent_id: Option<i64>, level: i64, self_id: Option<i64>) -> Result<()> {
+        if parent_id.is_none() {
+            if level != 0 {
+                return Err(anyhow::anyhow!(get_error_message(ErrorKey::TaskNoParentIdOnNonMajorTask, format!("Level = {}", level))));
+            }
+            return Ok(());
+        } else {
+            let parent_task = self.get_task_by_id(parent_id.unwrap()).await?;
+            if parent_task.is_none() {
+                return Err(anyhow::anyhow!(get_error_message(ErrorKey::TaskParentIdNotFound, format!("ID = {}", parent_id.unwrap()))));
+            }
+            let parent_task = parent_task.unwrap();
+            if parent_task.level != level - 1 {
+                return Err(anyhow::anyhow!(get_error_message(ErrorKey::TaskParentLevelInvalid, format!("Level = {}, Parent Level = {}", level, parent_task.level))));
+            }
+        }
+
+        if self_id.is_some() && parent_id.is_some() && parent_id.unwrap() == self_id.unwrap() {
+            return Err(anyhow::anyhow!(get_error_message(ErrorKey::TaskParentIdCannotBeSameAsTaskId, format!("ID = {}", parent_id.unwrap()))));
+        }
+
+        Ok(())
+    }
+
+    pub async fn create_task(&self, task: Task) -> Result<Task, DBAccessError> {
+        validate_task_id(task.id)?;
+        validate_task_project_id(task.project_id)?;
+        validate_task_parent_id(task.parent_id)?;
+        validate_task_level(task.level)?;
+        validate_task_status(task.status)?;
+        validate_task_name(&task.name)?;
+        validate_task_description(task.description.as_ref())?;
+        validate_task_unix_timestamp_or_none(task.deadline)?;
+
+        self.validate_project_id_is_exist(task.project_id).await?;
+        self.validate_parent_relation(task.parent_id, task.level, task.id).await?;
+
         let now = Utc::now().timestamp();
         sqlx::query_as!(
             Task,
@@ -39,10 +94,12 @@ impl TaskRepository {
         )
         .fetch_one(&self.pool)
         .await
-        .map_err(anyhow::Error::from)
+        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::TaskCreateFailed, e.to_string()))))
     }
 
-    pub async fn get_task_by_id(&self, id: i64) -> Result<Option<Task>> {
+    pub async fn get_task_by_id(&self, id: i64) -> Result<Option<Task>, DBAccessError> {
+        validate_task_id(Some(id))?;
+        
         sqlx::query_as!(
             Task,
             r#"
@@ -54,10 +111,10 @@ impl TaskRepository {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(anyhow::Error::from)
+        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::TaskGetByIdFailed, e.to_string()))))
     }
 
-    pub async fn get_all_tasks(&self) -> Result<Vec<Task>> {
+    pub async fn get_all_tasks(&self) -> Result<Vec<Task>, DBAccessError> {
         sqlx::query_as!(
             Task,
             r#"
@@ -67,7 +124,7 @@ impl TaskRepository {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(anyhow::Error::from)
+        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::TaskGetAllFailed, e.to_string()))))
     }
 
     fn build_where_clause(&self, filter: TaskFilter) -> (String, Vec<FilterValue>) {
@@ -156,8 +213,52 @@ impl TaskRepository {
         }
     }
 
+    fn validate_filter(&self, filter: &TaskFilter) -> Result<()> {
+        if filter.project_id.is_some() {
+            validate_task_project_id(filter.project_id.unwrap())?;
+        }
+        if filter.parent_id.is_some() {
+            validate_task_parent_id(filter.parent_id)?;
+        }
+        if let Some(level) = filter.level {
+            validate_task_level(level)?;
+        }
+        if let Some(status) = filter.status {
+            validate_task_status(status)?;
+        }
+        if let Some(name) = &filter.name {
+            validate_task_name(name)?;
+        }
+        if let Some(description) = &filter.description {
+            validate_task_description(Some(description))?;
+        }
+        if let Some(deadline) = filter.deadline_from {
+            validate_task_unix_timestamp(deadline)?;
+        }
+        if let Some(deadline) = filter.deadline_to {
+            validate_task_unix_timestamp(deadline)?;
+        }
+        if let Some(created_at) = filter.created_at_from {
+            validate_task_unix_timestamp(created_at)?;
+        }
+        if let Some(created_at) = filter.created_at_to {
+            validate_task_unix_timestamp(created_at)?;
+        }
+        if let Some(updated_at) = filter.updated_at_from {
+            validate_task_unix_timestamp(updated_at)?;
+        }
+        if let Some(updated_at) = filter.updated_at_to {
+            validate_task_unix_timestamp(updated_at)?;
+        }
+        Ok(())
+    }
 
-    pub async fn get_tasks_by_filter(&self, filter: TaskFilter) -> Result<Vec<Task>> {
+
+    pub async fn get_tasks_by_filter(&self, filter: TaskFilter) -> Result<Vec<Task>, DBAccessError> {
+        if self.validate_filter(&filter).is_err() {
+            return Ok(Vec::new());
+        }
+
         let (where_clause, bind_values) = self.build_where_clause(filter);
         let query = format!(
             "SELECT id, project_id, parent_id, level, name, description, status, deadline, created_at, updated_at FROM tasks {}",
@@ -176,10 +277,27 @@ impl TaskRepository {
         query_builder
             .fetch_all(&self.pool)
             .await
-            .map_err(anyhow::Error::from)
+            .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::TaskGetByFilterFailed, e.to_string()))))
     }
 
-    pub async fn update_task(&self, task: Task) -> Result<Task> {
+    pub async fn update_task(&self, task: Task) -> Result<Task, DBAccessError> {
+        if task.id.is_none() {
+            return Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::TaskIdInvalid, format!("ID = {}", task.id.unwrap())))));
+        }
+
+        validate_task_id(task.id)?;
+        validate_task_project_id(task.project_id)?;
+        validate_task_parent_id(task.parent_id)?;
+        validate_task_level(task.level)?;
+        validate_task_status(task.status)?;
+        validate_task_name(&task.name)?;
+        validate_task_description(task.description.as_ref())?;
+        validate_task_unix_timestamp_or_none(task.deadline)?;
+
+        self.validate_project_id_is_exist(task.project_id).await?;
+        self.validate_parent_relation(task.parent_id, task.level, task.id).await?;
+
+
         let now = Utc::now().timestamp();
         sqlx::query_as!(
             Task,
@@ -200,10 +318,12 @@ impl TaskRepository {
         )
         .fetch_one(&self.pool)
         .await
-        .map_err(anyhow::Error::from)
+        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::TaskUpdateFailed, e.to_string()))))
     }
 
-    pub async fn delete_task(&self, id: i64) -> Result<()> {
+    pub async fn delete_task(&self, id: i64) -> Result<(), DBAccessError> {
+        validate_task_id(Some(id))?;
+
         let result = sqlx::query!(
             r#"
                 DELETE FROM tasks WHERE id = $1
@@ -211,10 +331,11 @@ impl TaskRepository {
             id,
         )
         .execute(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::TaskDeleteFailedByIdNotFound, e.to_string()))))?;
 
         if result.rows_affected() == 0 {
-            return Err(anyhow::anyhow!("Task not found"));
+            return Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::TaskDeleteFailedByIdNotFound, format!("ID = {}", id)))));
         }
 
         Ok(())

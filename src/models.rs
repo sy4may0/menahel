@@ -97,3 +97,87 @@ pub struct TaskFilter {
     pub updated_at_from: Option<i64>,
     pub updated_at_to: Option<i64>,
 }
+
+impl TaskFilter {
+    pub fn new() -> Self {
+        Self {
+            project_id: None,
+            parent_id: None,
+            level: None,
+            name: None,
+            description: None,
+            status: None,
+            deadline_from: None,
+            deadline_to: None,
+            created_at_from: None,
+            created_at_to: None,
+            updated_at_from: None,
+            updated_at_to: None,
+        }
+    }
+
+    pub fn set_project_id(&mut self, project_id: i64) {
+        self.project_id = Some(project_id);
+    }
+
+    pub fn set_parent_id(&mut self, parent_id: i64) {
+        self.parent_id = Some(parent_id);
+    }
+
+    pub fn set_level(&mut self, level: i64) {
+        self.level = Some(level);
+    }
+
+    pub fn set_name(&mut self, name: String) {
+        self.name = Some(name);
+    }
+
+    pub fn set_description(&mut self, description: String) {
+        self.description = Some(description);
+    }
+
+    pub fn set_status(&mut self, status: i64) {
+        self.status = Some(status);
+    }
+
+    pub fn set_deadline_from(&mut self, deadline_from: i64) {
+        self.deadline_from = Some(deadline_from);
+    }
+
+    pub fn set_deadline_to(&mut self, deadline_to: i64) {
+        self.deadline_to = Some(deadline_to);
+    }
+
+    pub fn set_created_at_from(&mut self, created_at_from: i64) {
+        self.created_at_from = Some(created_at_from);
+    }
+
+    pub fn set_created_at_to(&mut self, created_at_to: i64) {
+        self.created_at_to = Some(created_at_to);
+    }
+
+    pub fn set_updated_at_from(&mut self, updated_at_from: i64) {
+        self.updated_at_from = Some(updated_at_from);
+    }
+
+    pub fn set_updated_at_to(&mut self, updated_at_to: i64) {
+        self.updated_at_to = Some(updated_at_to);
+    }
+}
+
+#[derive(sqlx::FromRow, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UserAssign {
+    pub id: Option<i64>,
+    pub user_id: i64,
+    pub task_id: i64,
+}
+
+impl UserAssign {
+    pub fn new(user_id: i64, task_id: i64) -> Self {
+        Self {
+            id: None,
+            user_id,
+            task_id,
+        }
+    }
+}

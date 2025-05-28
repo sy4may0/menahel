@@ -1,7 +1,9 @@
 use crate::models::User;
 use sqlx::{Pool, Sqlite};
 use anyhow::Result;
-use crate::utils::{validate_user_name, validate_user_email, validate_user_password};
+use crate::utils::{validate_user_id, validate_user_name, validate_user_email, validate_user_password};
+use crate::errors::messages::{get_error_message, ErrorKey};
+use crate::errors::db_error::DBAccessError;
 
 pub struct UserRepository {
     pool: Pool<Sqlite>,
@@ -12,7 +14,8 @@ impl UserRepository {
         Self { pool }
     }
 
-    pub async fn create_user(&self, user: User) -> Result<User, anyhow::Error> {
+    pub async fn create_user(&self, user: User) -> Result<User, DBAccessError> {
+        validate_user_id(user.id)?;
         validate_user_name(&user.username)?;
         validate_user_email(&user.email)?;
         validate_user_password(&user.password_hash)?;
@@ -30,10 +33,10 @@ impl UserRepository {
         )
         .fetch_one(&self.pool)
         .await
-        .map_err(anyhow::Error::from)
+        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserCreateFailed, e.to_string()))))
     }
 
-    pub async fn get_user_by_id(&self, id: i64) -> Result<Option<User>, anyhow::Error> {
+    pub async fn get_user_by_id(&self, id: i64) -> Result<Option<User>, DBAccessError> {
         sqlx::query_as!(
             User,
             r#"
@@ -44,10 +47,10 @@ impl UserRepository {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(anyhow::Error::from)
+        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserGetByIdFailed, e.to_string()))))
     }
 
-    pub async fn get_user_by_name(&self, name: &str) -> Result<Option<User>, anyhow::Error> {
+    pub async fn get_user_by_name(&self, name: &str) -> Result<Option<User>, DBAccessError> {
         sqlx::query_as!(
             User,
             r#"
@@ -58,10 +61,10 @@ impl UserRepository {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(anyhow::Error::from)
+        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserGetByNameFailed, e.to_string()))))
     }
 
-    pub async fn get_all_users(&self) -> Result<Vec<User>, anyhow::Error> {
+    pub async fn get_all_users(&self) -> Result<Vec<User>, DBAccessError> {
         sqlx::query_as!(
             User,
             r#"
@@ -71,10 +74,11 @@ impl UserRepository {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(anyhow::Error::from)
+        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserGetAllFailed, e.to_string()))))
     }
 
-    pub async fn update_user(&self, user: User) -> Result<User, anyhow::Error> {
+    pub async fn update_user(&self, user: User) -> Result<User, DBAccessError> {
+        validate_user_id(user.id)?;
         validate_user_name(&user.username)?;
         validate_user_email(&user.email)?;
         validate_user_password(&user.password_hash)?;
@@ -94,10 +98,11 @@ impl UserRepository {
         )
         .fetch_one(&self.pool)
         .await
-        .map_err(anyhow::Error::from)
+        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserUpdateFailed, e.to_string()))))
     }
 
-    pub async fn delete_user(&self, id: i64) -> Result<(), anyhow::Error> {
+    pub async fn delete_user(&self, id: i64) -> Result<(), DBAccessError> {
+        validate_user_id(Some(id))?;
         let result = sqlx::query!(
             r#"
                 DELETE FROM users
@@ -105,10 +110,11 @@ impl UserRepository {
             "#, id
         )
         .execute(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserDeleteFailedByIdNotFound, e.to_string()))))?;
 
         if result.rows_affected() == 0 {
-            return Err(anyhow::anyhow!("User not found"));
+            return Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserDeleteFailedByIdNotFound, format!("ID = {}", id)))));
         }
 
         Ok(())

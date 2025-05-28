@@ -248,5 +248,35 @@ mod project_test {
         let result = project_repo.update_project(updated_project).await;
         assert!(result.is_err());
     }
+
+    #[sqlx::test]
+    async fn test_project_repo_create_project_with_invalid_id(pool: SqlitePool) {
+        let project_repo = ProjectRepository::new(pool);
+        let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
+        let project_name = format!("invalid_id_test_{}", now);
+
+        let project = Project {
+            id: Some(-1),
+            name: project_name,
+        };
+
+        let result = project_repo.create_project(project).await;
+        assert!(result.is_err());
+    }
+
+    #[sqlx::test]
+    async fn test_project_repo_update_project_with_invalid_id(pool: SqlitePool) {
+        let project_repo = ProjectRepository::new(pool);
+        let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
+        let project_name = format!("invalid_id_test_{}", now);
+
+        let project = Project {
+            id: Some(0),
+            name: project_name,
+        };
+
+        let result = project_repo.update_project(project).await;
+        assert!(result.is_err());
+    }
     
 }

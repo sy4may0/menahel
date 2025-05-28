@@ -524,7 +524,7 @@ mod task_test {
             id: Some(1),
             project_id: 1,
             parent_id: None,
-            level: TaskLevel::Trivial.to_int(),
+            level: TaskLevel::Major.to_int(),
             name: "Test Task".to_string(),
             description: Some("Test Task Description".to_string()),
             status: TaskStatus::Done.to_int(),
@@ -536,7 +536,7 @@ mod task_test {
         assert_eq!(updated_task.id, Some(1));
         assert_eq!(updated_task.project_id, 1);
         assert_eq!(updated_task.parent_id, None);
-        assert_eq!(updated_task.level, TaskLevel::Trivial.to_int());
+        assert_eq!(updated_task.level, TaskLevel::Major.to_int());
         assert_eq!(updated_task.name, "Test Task");
         assert_eq!(updated_task.description, Some("Test Task Description".to_string()));
         assert_eq!(updated_task.status, TaskStatus::Done.to_int());
@@ -584,4 +584,295 @@ mod task_test {
         assert!(result.is_err());
     }
 
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_create_task_with_invalid_project_id(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let task = Task::new(
+            999, // 存在しないプロジェクトID
+            None,
+            TaskLevel::Major.to_int(),
+            "Test Task".to_string(),
+            Some("Test Task Description".to_string()),
+            TaskStatus::NotStarted.to_int(),
+            None
+        );
+        let result = task_repo.create_task(task).await;
+        assert!(result.is_err());
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_create_task_with_invalid_parent_level(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let task = Task::new(
+            1,
+            Some(1), // 親タスクのレベルが不正
+            TaskLevel::Major.to_int(),
+            "Test Task".to_string(),
+            Some("Test Task Description".to_string()),
+            TaskStatus::NotStarted.to_int(),
+            None
+        );
+        let result = task_repo.create_task(task).await;
+        assert!(result.is_err());
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_create_task_with_nonexistent_parent(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let task = Task::new(
+            1,
+            Some(999), // 存在しない親タスクID
+            TaskLevel::Minor.to_int(),
+            "Test Task".to_string(),
+            Some("Test Task Description".to_string()),
+            TaskStatus::NotStarted.to_int(),
+            None
+        );
+        let result = task_repo.create_task(task).await;
+        assert!(result.is_err());
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_update_task_with_invalid_project_id(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let task = Task {
+            id: Some(1),
+            project_id: 999, // 存在しないプロジェクトID
+            parent_id: None,
+            level: TaskLevel::Major.to_int(),
+            name: "Test Task".to_string(),
+            description: Some("Test Task Description".to_string()),
+            status: TaskStatus::NotStarted.to_int(),
+            deadline: None,
+            created_at: 0,
+            updated_at: None,
+        };
+        let result = task_repo.update_task(task).await;
+        assert!(result.is_err());
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_update_task_with_invalid_parent_level(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let task = Task {
+            id: Some(1),
+            project_id: 1,
+            parent_id: Some(1), // 親タスクのレベルが不正
+            level: TaskLevel::Major.to_int(),
+            name: "Test Task".to_string(),
+            description: Some("Test Task Description".to_string()),
+            status: TaskStatus::NotStarted.to_int(),
+            deadline: None,
+            created_at: 0,
+            updated_at: None,
+        };
+        let result = task_repo.update_task(task).await;
+        assert!(result.is_err());
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_update_task_with_nonexistent_parent(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let task = Task {
+            id: Some(1),
+            project_id: 1,
+            parent_id: Some(999), // 存在しない親タスクID
+            level: TaskLevel::Minor.to_int(),
+            name: "Test Task".to_string(),
+            description: Some("Test Task Description".to_string()),
+            status: TaskStatus::NotStarted.to_int(),
+            deadline: None,
+            created_at: 0,
+            updated_at: None,
+        };
+        let result = task_repo.update_task(task).await;
+        assert!(result.is_err());
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_update_task_with_self_as_parent(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let task = Task {
+            id: Some(1),
+            project_id: 1,
+            parent_id: Some(1), // 自身のIDを親タスクIDとして指定
+            level: TaskLevel::Minor.to_int(),
+            name: "Test Task".to_string(),
+            description: Some("Test Task Description".to_string()),
+            status: TaskStatus::NotStarted.to_int(),
+            deadline: None,
+            created_at: 0,
+            updated_at: None,
+        };
+        let result = task_repo.update_task(task).await;
+        assert!(result.is_err());
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_get_tasks_by_filter_with_invalid_project_id(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let filter = TaskFilter {
+            project_id: Some(-1), // 不正なプロジェクトID
+            parent_id: None,
+            level: None,
+            name: None,
+            description: None,
+            status: None,
+            deadline_from: None,
+            deadline_to: None,
+            created_at_from: None,
+            created_at_to: None,
+            updated_at_from: None,
+            updated_at_to: None,
+        };
+        let tasks = task_repo.get_tasks_by_filter(filter).await.unwrap();
+        assert_eq!(tasks.len(), 0);
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_get_tasks_by_filter_with_invalid_parent_id(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let filter = TaskFilter {
+            project_id: None,
+            parent_id: Some(-1), // 不正な親タスクID
+            level: None,
+            name: None,
+            description: None,
+            status: None,
+            deadline_from: None,
+            deadline_to: None,
+            created_at_from: None,
+            created_at_to: None,
+            updated_at_from: None,
+            updated_at_to: None,
+        };
+        let tasks = task_repo.get_tasks_by_filter(filter).await.unwrap();
+        assert_eq!(tasks.len(), 0);
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_get_tasks_by_filter_with_invalid_level(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let filter = TaskFilter {
+            project_id: None,
+            parent_id: None,
+            level: Some(999), // 不正なタスクレベル
+            name: None,
+            description: None,
+            status: None,
+            deadline_from: None,
+            deadline_to: None,
+            created_at_from: None,
+            created_at_to: None,
+            updated_at_from: None,
+            updated_at_to: None,
+        };
+        let tasks = task_repo.get_tasks_by_filter(filter).await.unwrap();
+        assert_eq!(tasks.len(), 0);
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_get_tasks_by_filter_with_invalid_status(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let filter = TaskFilter {
+            project_id: None,
+            parent_id: None,
+            level: None,
+            name: None,
+            description: None,
+            status: Some(999), // 不正なタスクステータス
+            deadline_from: None,
+            deadline_to: None,
+            created_at_from: None,
+            created_at_to: None,
+            updated_at_from: None,
+            updated_at_to: None,
+        };
+        let tasks = task_repo.get_tasks_by_filter(filter).await.unwrap();
+        assert_eq!(tasks.len(), 0);
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_get_tasks_by_filter_with_empty_name(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let filter = TaskFilter {
+            project_id: None,
+            parent_id: None,
+            level: None,
+            name: Some("".to_string()), // 空のタスク名
+            description: None,
+            status: None,
+            deadline_from: None,
+            deadline_to: None,
+            created_at_from: None,
+            created_at_to: None,
+            updated_at_from: None,
+            updated_at_to: None,
+        };
+        let tasks = task_repo.get_tasks_by_filter(filter).await.unwrap();
+        assert_eq!(tasks.len(), 0);
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_get_tasks_by_filter_with_too_long_name(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let filter = TaskFilter {
+            project_id: None,
+            parent_id: None,
+            level: None,
+            name: Some("a".repeat(129)), // 128文字超のタスク名
+            description: None,
+            status: None,
+            deadline_from: None,
+            deadline_to: None,
+            created_at_from: None,
+            created_at_to: None,
+            updated_at_from: None,
+            updated_at_to: None,
+        };
+        let tasks = task_repo.get_tasks_by_filter(filter).await.unwrap();
+        assert_eq!(tasks.len(), 0);
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_get_tasks_by_filter_with_too_long_description(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let filter = TaskFilter {
+            project_id: None,
+            parent_id: None,
+            level: None,
+            name: None,
+            description: Some("a".repeat(1025)), // 1024文字超のタスク説明
+            status: None,
+            deadline_from: None,
+            deadline_to: None,
+            created_at_from: None,
+            created_at_to: None,
+            updated_at_from: None,
+            updated_at_to: None,
+        };
+        let tasks = task_repo.get_tasks_by_filter(filter).await.unwrap();
+        assert_eq!(tasks.len(), 0);
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_get_tasks_by_filter_with_negative_timestamp(pool: SqlitePool) {
+        let task_repo = TaskRepository::new(pool);
+        let filter = TaskFilter {
+            project_id: None,
+            parent_id: None,
+            level: None,
+            name: None,
+            description: None,
+            status: None,
+            deadline_from: Some(-1), // 負のタイムスタンプ
+            deadline_to: None,
+            created_at_from: None,
+            created_at_to: None,
+            updated_at_from: None,
+            updated_at_to: None,
+        };
+        let tasks = task_repo.get_tasks_by_filter(filter).await.unwrap();
+        assert_eq!(tasks.len(), 0);
+    }
 }
