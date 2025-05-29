@@ -1,10 +1,12 @@
-use chrono::Utc;
-use crate::repository::project_repo::ProjectRepository;
 use crate::models::Project;
+use crate::repository::project_repo::ProjectRepository;
+use chrono::Utc;
 use sqlx::sqlite::SqlitePool;
 
 #[cfg(test)]
 mod project_test {
+    use crate::repository::project_repo::get_project_by_id_with_transaction;
+
     use super::*;
 
     #[sqlx::test]
@@ -22,7 +24,11 @@ mod project_test {
         assert_eq!(created_project.name, project_name);
         assert!(created_project.id.is_some());
 
-        let retrieved_project = project_repo.get_project_by_id(created_project.id.unwrap()).await.unwrap().unwrap();
+        let retrieved_project = project_repo
+            .get_project_by_id(created_project.id.unwrap())
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(retrieved_project.name, project_name);
     }
 
@@ -38,7 +44,11 @@ mod project_test {
         };
 
         let created_project = project_repo.create_project(project).await.unwrap();
-        let retrieved_project = project_repo.get_project_by_id(created_project.id.unwrap()).await.unwrap().unwrap();
+        let retrieved_project = project_repo
+            .get_project_by_id(created_project.id.unwrap())
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(retrieved_project.name, project_name);
     }
 
@@ -54,7 +64,11 @@ mod project_test {
         };
 
         project_repo.create_project(project).await.unwrap();
-        let retrieved_project = project_repo.get_project_by_name(&project_name).await.unwrap().unwrap();
+        let retrieved_project = project_repo
+            .get_project_by_name(&project_name)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(retrieved_project.name, project_name);
     }
 
@@ -64,10 +78,12 @@ mod project_test {
         let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
 
         let project_count = 5;
-        let projects = (1..=project_count).map(|i| Project {
-            id: None,
-            name: format!("get_all_projects_test_{}_{}", now, i),
-        }).collect::<Vec<Project>>();
+        let projects = (1..=project_count)
+            .map(|i| Project {
+                id: None,
+                name: format!("get_all_projects_test_{}_{}", now, i),
+            })
+            .collect::<Vec<Project>>();
 
         let mut created_projects = Vec::new();
         for project in projects.into_iter() {
@@ -88,7 +104,7 @@ mod project_test {
     async fn test_project_repo_get_all_projects_empty(pool: SqlitePool) {
         let project_repo = ProjectRepository::new(pool);
         let retrieved_projects = project_repo.get_all_projects().await.unwrap();
-        assert!(retrieved_projects.is_empty()); 
+        assert!(retrieved_projects.is_empty());
     }
 
     #[sqlx::test]
@@ -111,7 +127,11 @@ mod project_test {
 
         project_repo.update_project(updated_project).await.unwrap();
 
-        let retrieved_project = project_repo.get_project_by_id(created_project.id.unwrap()).await.unwrap().unwrap();
+        let retrieved_project = project_repo
+            .get_project_by_id(created_project.id.unwrap())
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(retrieved_project.name, project_name + "_updated");
         assert_eq!(retrieved_project.id, created_project.id);
     }
@@ -128,11 +148,20 @@ mod project_test {
         };
 
         let created_project = project_repo.create_project(project).await.unwrap();
-        let retrieved_project = project_repo.get_project_by_id(created_project.id.unwrap()).await.unwrap();
+        let retrieved_project = project_repo
+            .get_project_by_id(created_project.id.unwrap())
+            .await
+            .unwrap();
         assert!(!retrieved_project.is_none());
 
-        project_repo.delete_project(created_project.id.unwrap()).await.unwrap();
-        let retrieved_project = project_repo.get_project_by_id(created_project.id.unwrap()).await.unwrap();
+        project_repo
+            .delete_project(created_project.id.unwrap())
+            .await
+            .unwrap();
+        let retrieved_project = project_repo
+            .get_project_by_id(created_project.id.unwrap())
+            .await
+            .unwrap();
         assert!(retrieved_project.is_none());
     }
 
@@ -278,5 +307,25 @@ mod project_test {
         let result = project_repo.update_project(project).await;
         assert!(result.is_err());
     }
-    
+
+    #[sqlx::test(fixtures("projects"))]
+    async fn test_project_repo_get_project_by_id_with_transaction(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let project = get_project_by_id_with_transaction(1, &mut tx)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(project.name, "Test Project 0");
+    }
+
+    #[sqlx::test(fixtures("projects"))]
+    async fn test_project_repo_get_project_by_id_with_transaction_not_found(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let project = get_project_by_id_with_transaction(100, &mut tx)
+            .await
+            .unwrap();
+        assert!(project.is_none());
+    }
 }

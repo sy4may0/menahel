@@ -1,5 +1,5 @@
-use thiserror::Error;
 use sqlx::Error as SqlxError;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum DBAccessError {
@@ -34,4 +34,4 @@ impl DBAccessError {
             _ => false,
         }
     }
-} 
+}

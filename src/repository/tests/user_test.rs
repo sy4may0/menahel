@@ -1,8 +1,8 @@
-use chrono::Utc;
-use crate::repository::user_repo::UserRepository;
 use crate::models::User;
+use crate::repository::user_repo::{UserRepository, get_user_by_id_with_transaction};
+use chrono::Utc;
+use sha2::{Digest, Sha256};
 use sqlx::sqlite::SqlitePool;
-use sha2::{Sha256, Digest};
 
 fn build_password() -> String {
     let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
@@ -36,7 +36,11 @@ mod user_test {
         assert_ne!(created_user.id, None);
 
         // Result<Option<User>>が返ってくるので、2回unwrapする。
-        let retrieved_user = user_repo.get_user_by_id(created_user.id.unwrap()).await.unwrap().unwrap();
+        let retrieved_user = user_repo
+            .get_user_by_id(created_user.id.unwrap())
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(retrieved_user.username, username);
         assert_eq!(retrieved_user.email, email);
         assert_eq!(retrieved_user.id, created_user.id);
@@ -60,7 +64,11 @@ mod user_test {
 
         let created_user = user_repo.create_user(user).await.unwrap();
 
-        let retrieved_user = user_repo.get_user_by_id(created_user.id.unwrap()).await.unwrap().unwrap();
+        let retrieved_user = user_repo
+            .get_user_by_id(created_user.id.unwrap())
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(retrieved_user.username, username);
         assert_eq!(retrieved_user.email, email);
         assert_eq!(retrieved_user.id, created_user.id);
@@ -87,12 +95,19 @@ mod user_test {
 
         let created_user = user_repo.create_user(user).await.unwrap();
 
-        let retrieved_user = user_repo.get_user_by_name(&username).await.unwrap().unwrap();
+        let retrieved_user = user_repo
+            .get_user_by_name(&username)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(retrieved_user.username, username);
         assert_eq!(retrieved_user.email, email);
         assert_eq!(retrieved_user.id, created_user.id);
 
-        let not_found_user = user_repo.get_user_by_name("XXX_SUPER_UNCHI_XXX").await.unwrap();
+        let not_found_user = user_repo
+            .get_user_by_name("XXX_SUPER_UNCHI_XXX")
+            .await
+            .unwrap();
         assert!(not_found_user.is_none());
     }
 
@@ -102,12 +117,14 @@ mod user_test {
         let now = Utc::now().format("%Y%m%d%H%M%S").to_string();
 
         let user_count = 5;
-        let users = (1..=user_count).map(|i| User {
-            id: None,
-            username: format!("get_all_users_test_{}_{}", now, i),
-            email: format!("get_all_users_test_{}_{}@test.com", now, i),
-            password_hash: build_password(),
-        }).collect::<Vec<User>>();
+        let users = (1..=user_count)
+            .map(|i| User {
+                id: None,
+                username: format!("get_all_users_test_{}_{}", now, i),
+                email: format!("get_all_users_test_{}_{}@test.com", now, i),
+                password_hash: build_password(),
+            })
+            .collect::<Vec<User>>();
 
         let mut created_users = Vec::new();
         for user in users.into_iter() {
@@ -159,7 +176,11 @@ mod user_test {
 
         user_repo.update_user(updated_user).await.unwrap();
 
-        let retrieved_user = user_repo.get_user_by_id(created_user.id.unwrap()).await.unwrap().unwrap();
+        let retrieved_user = user_repo
+            .get_user_by_id(created_user.id.unwrap())
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(retrieved_user.username, username + "_updated");
         assert_eq!(retrieved_user.email, email + "_updated");
         assert_eq!(retrieved_user.id, created_user.id);
@@ -182,11 +203,20 @@ mod user_test {
         };
 
         let created_user = user_repo.create_user(user).await.unwrap();
-        let retrieved_user = user_repo.get_user_by_id(created_user.id.unwrap()).await.unwrap();
+        let retrieved_user = user_repo
+            .get_user_by_id(created_user.id.unwrap())
+            .await
+            .unwrap();
         assert!(!retrieved_user.is_none());
 
-        user_repo.delete_user(created_user.id.unwrap()).await.unwrap();
-        let retrieved_user = user_repo.get_user_by_id(created_user.id.unwrap()).await.unwrap();
+        user_repo
+            .delete_user(created_user.id.unwrap())
+            .await
+            .unwrap();
+        let retrieved_user = user_repo
+            .get_user_by_id(created_user.id.unwrap())
+            .await
+            .unwrap();
         assert!(retrieved_user.is_none());
     }
 
@@ -331,7 +361,7 @@ mod user_test {
             email: "".to_string(),
             password_hash: build_password(),
         };
-        
+
         let result = user_repo.create_user(user).await;
         assert!(result.is_err());
     }
@@ -347,7 +377,7 @@ mod user_test {
             email: "invalid_email".to_string(),
             password_hash: build_password(),
         };
-        
+
         let result = user_repo.create_user(user).await;
         assert!(result.is_err());
     }
@@ -726,5 +756,21 @@ mod user_test {
 
         let result = user_repo.create_user(user).await;
         assert!(result.is_err());
+    }
+
+    #[sqlx::test(fixtures("user"))]
+    async fn test_user_repo_get_user_by_id_with_transaction(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let user = get_user_by_id_with_transaction(1, &mut tx).await.unwrap().unwrap();
+        assert_eq!(user.id, Some(1));
+    }
+
+    #[sqlx::test(fixtures("user"))]
+    async fn test_user_repo_get_user_by_id_with_transaction_not_found(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let user = get_user_by_id_with_transaction(100, &mut tx).await.unwrap();
+        assert!(user.is_none());
     }
 }

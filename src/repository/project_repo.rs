@@ -1,9 +1,9 @@
-use crate::models::Project;
-use sqlx::{Pool, Sqlite};
-use anyhow::Result;
-use crate::repository::validations::{validate_project_id, validate_project_name};
 use crate::errors::db_error::DBAccessError;
-use crate::errors::messages::{get_error_message, ErrorKey};
+use crate::errors::messages::{ErrorKey, get_error_message};
+use crate::models::Project;
+use crate::repository::validations::{validate_project_id, validate_project_name};
+use anyhow::Result;
+use sqlx::{Pool, Sqlite, Transaction};
 
 pub struct ProjectRepository {
     pool: Pool<Sqlite>,
@@ -28,7 +28,12 @@ impl ProjectRepository {
         )
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::ProjectCreateFailed, e.to_string()))))
+        .map_err(|e| {
+            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::ProjectCreateFailed,
+                e.to_string()
+            )))
+        })
     }
 
     pub async fn get_project_by_id(&self, id: i64) -> Result<Option<Project>, DBAccessError> {
@@ -43,7 +48,12 @@ impl ProjectRepository {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::ProjectGetByIdFailed, e.to_string()))))
+        .map_err(|e| {
+            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::ProjectGetByIdFailed,
+                e.to_string()
+            )))
+        })
     }
 
     pub async fn get_project_by_name(&self, name: &str) -> Result<Option<Project>, DBAccessError> {
@@ -58,7 +68,12 @@ impl ProjectRepository {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::ProjectGetByNameFailed, e.to_string()))))
+        .map_err(|e| {
+            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::ProjectGetByNameFailed,
+                e.to_string()
+            )))
+        })
     }
 
     pub async fn get_all_projects(&self) -> Result<Vec<Project>, DBAccessError> {
@@ -71,7 +86,12 @@ impl ProjectRepository {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::ProjectGetAllFailed, e.to_string()))))
+        .map_err(|e| {
+            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::ProjectGetAllFailed,
+                e.to_string()
+            )))
+        })
     }
 
     pub async fn update_project(&self, project: Project) -> Result<Project, DBAccessError> {
@@ -91,7 +111,12 @@ impl ProjectRepository {
         )
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::ProjectUpdateFailed, e.to_string()))))
+        .map_err(|e| {
+            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::ProjectUpdateFailed,
+                e.to_string()
+            )))
+        })
     }
 
     pub async fn delete_project(&self, id: i64) -> Result<(), DBAccessError> {
@@ -101,16 +126,48 @@ impl ProjectRepository {
             r#"
                 DELETE FROM projects
                 WHERE id = $1
-            "#,id,
+            "#,
+            id,
         )
         .execute(&self.pool)
         .await
-        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::ProjectDeleteFailedByIdNotFound, e.to_string()))))?;
+        .map_err(|e| {
+            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::ProjectDeleteFailedByIdNotFound,
+                e.to_string()
+            )))
+        })?;
 
         if result.rows_affected() == 0 {
-            return Err(DBAccessError::ValidationError(get_error_message(ErrorKey::ProjectDeleteFailedByIdNotFound, format!("ID = {}", id))));
+            return Err(DBAccessError::ValidationError(get_error_message(
+                ErrorKey::ProjectDeleteFailedByIdNotFound,
+                format!("ID = {}", id),
+            )));
         }
 
         Ok(())
     }
+}
+
+pub async fn get_project_by_id_with_transaction(
+    id: i64,
+    transaction: &mut Transaction<'_, Sqlite>,
+) -> Result<Option<Project>, DBAccessError> {
+    sqlx::query_as!(
+        Project,
+        r#"
+            SELECT id, name
+            FROM projects
+            WHERE id = $1
+        "#,
+        id,
+    )
+    .fetch_optional(&mut **transaction)
+    .await
+    .map_err(|e| {
+        DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+            ErrorKey::ProjectGetByIdFailed,
+            e.to_string()
+        )))
+    })
 }

@@ -1,5 +1,5 @@
-use crate::errors::messages::{get_error_message, ErrorKey};
-use enum_iterator::{all, Sequence};
+use crate::errors::messages::{ErrorKey, get_error_message};
+use enum_iterator::{Sequence, all};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
 pub enum TaskLevel {
@@ -22,13 +22,16 @@ impl TaskLevel {
             0 => Ok(TaskLevel::Major),
             1 => Ok(TaskLevel::Minor),
             2 => Ok(TaskLevel::Trivial),
-            _ => Err(anyhow::anyhow!(get_error_message(ErrorKey::TaskLevelInvalid, format!("Level = {}", level)))),
+            _ => Err(anyhow::anyhow!(get_error_message(
+                ErrorKey::TaskLevelInvalid,
+                format!("Level = {}", level)
+            ))),
         }
     }
-}
 
-pub fn get_max_task_level() -> i64 {
-    all::<TaskLevel>().collect::<Vec<TaskLevel>>().len() as i64 - 1
+    pub fn max_level() -> i64 {
+        all::<TaskLevel>().collect::<Vec<TaskLevel>>().len() as i64 - 1
+    }
 }
 
 pub enum TaskStatus {
@@ -37,7 +40,7 @@ pub enum TaskStatus {
     Reviewing,
     Cancelled,
     Done,
-} 
+}
 
 impl TaskStatus {
     pub fn to_int(&self) -> i64 {
@@ -57,7 +60,10 @@ impl TaskStatus {
             2 => Ok(TaskStatus::Reviewing),
             3 => Ok(TaskStatus::Cancelled),
             4 => Ok(TaskStatus::Done),
-            _ => Err(anyhow::anyhow!(get_error_message(ErrorKey::TaskStatusInvalid, format!("Status = {}", status)))),
+            _ => Err(anyhow::anyhow!(get_error_message(
+                ErrorKey::TaskStatusInvalid,
+                format!("Status = {}", status)
+            ))),
         }
     }
 
@@ -78,8 +84,10 @@ impl TaskStatus {
             "rv" => Ok(TaskStatus::Reviewing),
             "cn" => Ok(TaskStatus::Cancelled),
             "dn" => Ok(TaskStatus::Done),
-            _ => Err(anyhow::anyhow!(get_error_message(ErrorKey::TaskStatusInvalid, format!("Status = {}", status)))),
+            _ => Err(anyhow::anyhow!(get_error_message(
+                ErrorKey::TaskStatusInvalid,
+                format!("Status = {}", status)
+            ))),
         }
     }
-
 }

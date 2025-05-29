@@ -1,0 +1,2 @@
+INSERT INTO users (id, username, email, password_hash) VALUES (1, 'Test User 0', 'test0@example.com', 'password0');
+INSERT INTO users (id, username, email, password_hash) VALUES (2, 'Test User 1', 'test1@example.com', 'password1');

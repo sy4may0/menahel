@@ -1,7 +1,7 @@
-use crate::repository::task_repo::TaskRepository;
-use crate::models::{Task, TaskFilter};
-use crate::enums::TaskStatus;
 use crate::enums::TaskLevel;
+use crate::enums::TaskStatus;
+use crate::models::{Task, task::TaskFilter};
+use crate::repository::task_repo::{TaskRepository, get_task_by_id_with_transaction};
 use chrono::Utc;
 use sqlx::sqlite::SqlitePool;
 
@@ -21,16 +21,23 @@ mod task_test {
             "Test Task".to_string(),
             Some("Test Task Description".to_string()),
             TaskStatus::NotStarted.to_int(),
-            None
+            None,
         );
         let created_task = task_repo.create_task(task).await.unwrap();
 
-        let retrieved_task = task_repo.get_task_by_id(created_task.id.unwrap()).await.unwrap().unwrap();
+        let retrieved_task = task_repo
+            .get_task_by_id(created_task.id.unwrap())
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(retrieved_task.project_id, 1);
         assert!(retrieved_task.parent_id.is_none());
         assert_eq!(retrieved_task.level, TaskLevel::Major.to_int());
         assert_eq!(retrieved_task.name, "Test Task");
-        assert_eq!(retrieved_task.description, Some("Test Task Description".to_string()));
+        assert_eq!(
+            retrieved_task.description,
+            Some("Test Task Description".to_string())
+        );
         assert_eq!(retrieved_task.status, TaskStatus::NotStarted.to_int());
         assert!(retrieved_task.deadline.is_none());
         assert!(retrieved_task.created_at >= now);
@@ -49,7 +56,7 @@ mod task_test {
             "Test Task with Parent".to_string(),
             Some("Test Task with Parent Description".to_string()),
             TaskStatus::NotStarted.to_int(),
-            None
+            None,
         );
         let created_task = task_repo.create_task(task).await.unwrap();
         assert_eq!(created_task.id, Some(18));
@@ -57,7 +64,10 @@ mod task_test {
         assert_eq!(created_task.parent_id, Some(1));
         assert_eq!(created_task.level, TaskLevel::Minor.to_int());
         assert_eq!(created_task.name, "Test Task with Parent");
-        assert_eq!(created_task.description, Some("Test Task with Parent Description".to_string()));
+        assert_eq!(
+            created_task.description,
+            Some("Test Task with Parent Description".to_string())
+        );
         assert_eq!(created_task.status, TaskStatus::NotStarted.to_int());
         assert!(created_task.deadline.is_none());
         assert!(created_task.created_at >= now);
@@ -73,7 +83,10 @@ mod task_test {
         assert!(task.parent_id.is_none());
         assert_eq!(task.level, TaskLevel::Major.to_int());
         assert_eq!(task.name, "Test PJ0 Major TASK");
-        assert_eq!(task.description, Some("TEST PJ0 Major TASK - Description".to_string()));
+        assert_eq!(
+            task.description,
+            Some("TEST PJ0 Major TASK - Description".to_string())
+        );
         assert_eq!(task.status, TaskStatus::NotStarted.to_int());
         assert!(task.deadline.unwrap() == 0);
         assert!(task.created_at == 0);
@@ -97,7 +110,10 @@ mod task_test {
         assert_eq!(tasks[15].parent_id, Some(5));
         assert_eq!(tasks[15].level, TaskLevel::Trivial.to_int());
         assert_eq!(tasks[15].name, "Test PJ1 Trivial TASK UPDATED_AT 10000");
-        assert_eq!(tasks[15].description, Some("TEST PJ1 Trivial TASK - Description".to_string()));
+        assert_eq!(
+            tasks[15].description,
+            Some("TEST PJ1 Trivial TASK - Description".to_string())
+        );
         assert_eq!(tasks[15].status, TaskStatus::Done.to_int());
         assert!(tasks[15].deadline.is_none());
         assert!(tasks[15].created_at == 0);
@@ -148,7 +164,7 @@ mod task_test {
         let tasks = task_repo.get_tasks_by_filter(filter).await.unwrap();
         assert_eq!(tasks.len(), 1);
         assert_eq!(tasks[0].parent_id, Some(1));
-    }   
+    }
 
     #[sqlx::test(fixtures("tasks"))]
     async fn test_task_repo_get_tasks_by_filter_level(pool: SqlitePool) {
@@ -216,7 +232,10 @@ mod task_test {
         };
         let tasks = task_repo.get_tasks_by_filter(filter).await.unwrap();
         assert_eq!(tasks.len(), 1);
-        assert_eq!(tasks[0].description, Some("TEST PJ0 Trivial TASK - Description".to_string()));
+        assert_eq!(
+            tasks[0].description,
+            Some("TEST PJ0 Trivial TASK - Description".to_string())
+        );
     }
 
     #[sqlx::test(fixtures("tasks"))]
@@ -305,7 +324,7 @@ mod task_test {
         };
         let tasks = task_repo.get_tasks_by_filter(filter).await.unwrap();
         assert_eq!(tasks.len(), 11);
-        for task in tasks { 
+        for task in tasks {
             assert!(task.deadline.is_some());
             assert!(task.deadline.unwrap() <= 3000);
         }
@@ -461,7 +480,7 @@ mod task_test {
         assert!(tasks[0].deadline.unwrap() == 99999);
         assert!(tasks[0].created_at == 99999);
         assert!(tasks[0].updated_at.unwrap() == 99999);
-    } 
+    }
 
     #[sqlx::test(fixtures("tasks"))]
     async fn test_task_repo_get_tasks_by_filter_no_conditions(pool: SqlitePool) {
@@ -515,7 +534,10 @@ mod task_test {
         assert_eq!(updated_task.parent_id, None);
         assert_eq!(updated_task.level, TaskLevel::Major.to_int());
         assert_eq!(updated_task.name, "Test PJ0 Major TASK");
-        assert_eq!(updated_task.description, Some("TEST PJ0 Major TASK - Description".to_string()));
+        assert_eq!(
+            updated_task.description,
+            Some("TEST PJ0 Major TASK - Description".to_string())
+        );
         assert_eq!(updated_task.status, TaskStatus::NotStarted.to_int());
         assert_eq!(updated_task.deadline, Some(0));
         assert!(updated_task.updated_at.is_none());
@@ -538,7 +560,10 @@ mod task_test {
         assert_eq!(updated_task.parent_id, None);
         assert_eq!(updated_task.level, TaskLevel::Major.to_int());
         assert_eq!(updated_task.name, "Test Task");
-        assert_eq!(updated_task.description, Some("Test Task Description".to_string()));
+        assert_eq!(
+            updated_task.description,
+            Some("Test Task Description".to_string())
+        );
         assert_eq!(updated_task.status, TaskStatus::Done.to_int());
         assert_eq!(updated_task.deadline, Some(1000));
         assert!(updated_task.updated_at.is_some());
@@ -594,7 +619,7 @@ mod task_test {
             "Test Task".to_string(),
             Some("Test Task Description".to_string()),
             TaskStatus::NotStarted.to_int(),
-            None
+            None,
         );
         let result = task_repo.create_task(task).await;
         assert!(result.is_err());
@@ -610,7 +635,7 @@ mod task_test {
             "Test Task".to_string(),
             Some("Test Task Description".to_string()),
             TaskStatus::NotStarted.to_int(),
-            None
+            None,
         );
         let result = task_repo.create_task(task).await;
         assert!(result.is_err());
@@ -626,7 +651,7 @@ mod task_test {
             "Test Task".to_string(),
             Some("Test Task Description".to_string()),
             TaskStatus::NotStarted.to_int(),
-            None
+            None,
         );
         let result = task_repo.create_task(task).await;
         assert!(result.is_err());
@@ -874,5 +899,24 @@ mod task_test {
         };
         let tasks = task_repo.get_tasks_by_filter(filter).await.unwrap();
         assert_eq!(tasks.len(), 0);
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_get_task_by_id_with_transaction(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let task = get_task_by_id_with_transaction(1, &mut tx)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(task.id, Some(1));
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_get_task_by_id_with_transaction_not_found(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let task = get_task_by_id_with_transaction(100, &mut tx).await.unwrap();
+        assert!(task.is_none());
     }
 }

@@ -1,47 +1,4 @@
 use serde::{Deserialize, Serialize};
-use crate::repository::validations::validate_user_password;
-use sha2::{Sha256, Digest};
-
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct User {
-    pub id: Option<i64>,
-    pub username: String,
-    pub email: String,
-    pub password_hash: String,
-}
-
-impl User {
-    pub fn new(username: String, email: String, password: String) -> Self {
-        let password_hash = match validate_user_password(&password) {
-            Ok(()) => password,
-            _ => {
-                format!("{:x}", Sha256::digest(password.as_bytes()))
-            }
-        };
-
-        Self {
-            id: None,
-            username,
-            email,
-            password_hash,
-        }
-    }
-}
-
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Project {
-    pub id: Option<i64>,
-    pub name: String,
-}
-
-impl Project {
-    pub fn new(name: String) -> Self {
-        Self {
-            id: None,
-            name,
-        }
-    }
-}
 
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Task {
@@ -162,22 +119,5 @@ impl TaskFilter {
 
     pub fn set_updated_at_to(&mut self, updated_at_to: i64) {
         self.updated_at_to = Some(updated_at_to);
-    }
-}
-
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct UserAssign {
-    pub id: Option<i64>,
-    pub user_id: i64,
-    pub task_id: i64,
-}
-
-impl UserAssign {
-    pub fn new(user_id: i64, task_id: i64) -> Self {
-        Self {
-            id: None,
-            user_id,
-            task_id,
-        }
     }
 }
