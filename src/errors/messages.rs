@@ -21,6 +21,10 @@ pub enum ErrorKey {
     UserUpdateFailed,
     UserDeleteFailed,
     UserDeleteFailedByIdNotFound,
+    UserGetUsersCountFailed,
+    UserGetUsersWithPagenationFailed,
+    UserGetByIdNotFound,
+    UserGetByNameNotFound,
 
     // プロジェクト関連のエラー
     ProjectIdInvalid,
@@ -92,6 +96,12 @@ pub enum ErrorKey {
     CommentContentEmpty,
     CommentToNotMaxLevelTask,
     CommentContentTooLong,
+
+    // ユーザーハンドラ関連のエラー
+    UserHandlerGetUsersInvalidPage,
+    UserHandlerGetUsersInvalidTarget,
+    UserHandlerGetUsersNoNameSpecified,
+    UserHandlerGetUsersNoIdSpecified,
 }
 
 impl fmt::Display for ErrorKey {
@@ -116,6 +126,10 @@ impl fmt::Display for ErrorKey {
             ErrorKey::UserUpdateFailed => write!(f, "UserUpdateFailed"),
             ErrorKey::UserDeleteFailed => write!(f, "UserDeleteFailed"),
             ErrorKey::UserDeleteFailedByIdNotFound => write!(f, "UserDeleteFailedByIdNotFound"),
+            ErrorKey::UserGetUsersCountFailed => write!(f, "UserGetUsersCountFailed"),
+            ErrorKey::UserGetUsersWithPagenationFailed => write!(f, "UserGetUsersWithPagenationFailed"),
+            ErrorKey::UserGetByIdNotFound => write!(f, "UserGetByIdNotFound"),
+            ErrorKey::UserGetByNameNotFound => write!(f, "UserGetByNameNotFound"),
 
             // プロジェクト関連のエラー
             ErrorKey::ProjectIdInvalid => write!(f, "ProjectIdInvalid"),
@@ -199,6 +213,12 @@ impl fmt::Display for ErrorKey {
             ErrorKey::CommentContentEmpty => write!(f, "CommentContentEmpty"),
             ErrorKey::CommentContentTooLong => write!(f, "CommentContentTooLong"),
             ErrorKey::CommentToNotMaxLevelTask => write!(f, "CommentToNotMaxLevelTask"),
+
+            // ユーザーハンドラ関連のエラー
+            ErrorKey::UserHandlerGetUsersInvalidPage => write!(f, "UserHandlerGetUsersInvalidPage"),
+            ErrorKey::UserHandlerGetUsersInvalidTarget => write!(f, "UserHandlerGetUsersInvalidTarget"),
+            ErrorKey::UserHandlerGetUsersNoNameSpecified => write!(f, "UserHandlerGetUsersNoNameSpecified"),
+            ErrorKey::UserHandlerGetUsersNoIdSpecified => write!(f, "UserHandlerGetUsersNoIdSpecified"),
         }
     }
 }
@@ -339,6 +359,23 @@ static ERROR_MESSAGES: Lazy<HashMap<ErrorKey, HashMap<&'static str, &'static str
             ErrorKey::UserDeleteFailedByIdNotFound,
             user_delete_failed_by_id_not_found,
         );
+
+        let mut user_get_users_count_failed = HashMap::new();
+        user_get_users_count_failed.insert(
+            "en",
+            "Failed to get users count due to database operation failure",
+        );
+        user_get_users_count_failed.insert("jp", "DB操作処理の問題によりユーザーの数の取得に失敗しました");
+        map.insert(ErrorKey::UserGetUsersCountFailed, user_get_users_count_failed);
+
+        let mut user_get_users_with_pagenation_failed = HashMap::new();
+        user_get_users_with_pagenation_failed.insert(
+            "en",
+            "Specified page does not have any users",
+        );
+        user_get_users_with_pagenation_failed.insert("jp", "指定されたページにユーザーが存在しません");
+        map.insert(ErrorKey::UserGetUsersWithPagenationFailed, user_get_users_with_pagenation_failed);
+
 
         // プロジェクト関連のエラーメッセージ
         let mut project_id_invalid = HashMap::new();
@@ -915,6 +952,45 @@ static ERROR_MESSAGES: Lazy<HashMap<ErrorKey, HashMap<&'static str, &'static str
             ErrorKey::CommentToNotMaxLevelTask,
             comment_to_not_max_level_task,
         );
+
+        // ユーザーハンドラ関連のエラーメッセージ
+        let mut user_handler_get_users_invalid_page = HashMap::new();
+        user_handler_get_users_invalid_page.insert(
+            "en",
+            "Invalid page or page size. Page must be greater than 0, and page size must be greater than 0 and less than 101",
+        );
+        user_handler_get_users_invalid_page.insert(
+            "jp", 
+            "ページまたはページサイズが指定されていません。また、ページは1以上、ページサイズは1 <= 100である必要があります");
+        map.insert(
+            ErrorKey::UserHandlerGetUsersInvalidPage,
+            user_handler_get_users_invalid_page,
+        );
+
+        let mut user_get_by_id_not_found = HashMap::new();
+        user_get_by_id_not_found.insert("en", "User not found");
+        user_get_by_id_not_found.insert("jp", "ユーザーが見つかりません");
+        map.insert(ErrorKey::UserGetByIdNotFound, user_get_by_id_not_found);
+
+        let mut user_get_by_name_not_found = HashMap::new();
+        user_get_by_name_not_found.insert("en", "User not found");
+        user_get_by_name_not_found.insert("jp", "ユーザーが見つかりません");
+        map.insert(ErrorKey::UserGetByNameNotFound, user_get_by_name_not_found);
+
+        let mut user_handler_get_users_invalid_target = HashMap::new();
+        user_handler_get_users_invalid_target.insert("en", "Invalid target. Target must be 'all', 'name', or 'id'");
+        user_handler_get_users_invalid_target.insert("jp", "ターゲットが無効です。ターゲットは'all'、'name'、または'id'である必要があります");
+        map.insert(ErrorKey::UserHandlerGetUsersInvalidTarget, user_handler_get_users_invalid_target);
+
+        let mut user_handler_get_users_no_name_specified = HashMap::new();
+        user_handler_get_users_no_name_specified.insert("en", "Name is not specified");
+        user_handler_get_users_no_name_specified.insert("jp", "名前が指定されていません");
+        map.insert(ErrorKey::UserHandlerGetUsersNoNameSpecified, user_handler_get_users_no_name_specified);
+
+        let mut user_handler_get_users_no_id_specified = HashMap::new();
+        user_handler_get_users_no_id_specified.insert("en", "ID is not specified");
+        user_handler_get_users_no_id_specified.insert("jp", "IDが指定されていません");
+        map.insert(ErrorKey::UserHandlerGetUsersNoIdSpecified, user_handler_get_users_no_id_specified);
 
         map
     });

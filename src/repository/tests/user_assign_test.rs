@@ -6,7 +6,7 @@ use crate::repository::user_assign_repo::{
 use sqlx::sqlite::SqlitePool;
 
 #[cfg(test)]
-mod user_assign_test {
+mod user_assign_repo_test {
     use super::*;
 
     #[sqlx::test(fixtures("user_assign"))]

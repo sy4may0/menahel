@@ -9,14 +9,11 @@ pub enum DBAccessError {
     #[error("QueryError: {0}")]
     QueryError(#[from] anyhow::Error),
 
-    #[error("TimeoutError: {0}")]
-    TimeoutError(String),
-
-    #[error("ResourceExhaustedError: {0}")]
-    ResourceExhaustedError(String),
-
     #[error("ValidationError: {0}")]
     ValidationError(String),
+
+    #[error("NotFoundError: {0}")]
+    NotFoundError(String),
 }
 
 impl DBAccessError {
@@ -29,8 +26,6 @@ impl DBAccessError {
                     SqlxError::PoolClosed | SqlxError::PoolTimedOut | SqlxError::Io(_)
                 )
             }
-            DBAccessError::TimeoutError(_) => true,
-            DBAccessError::ResourceExhaustedError(_) => true,
             _ => false,
         }
     }

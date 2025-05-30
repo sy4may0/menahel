@@ -42,8 +42,8 @@ impl UserRepository {
         })
     }
 
-    pub async fn get_user_by_id(&self, id: i64) -> Result<Option<User>, DBAccessError> {
-        sqlx::query_as!(
+    pub async fn get_user_by_id(&self, id: i64) -> Result<User, DBAccessError> {
+        let result = sqlx::query_as!(
             User,
             r#"
                 SELECT id, username, email, password_hash
@@ -59,11 +59,19 @@ impl UserRepository {
                 ErrorKey::UserGetByIdFailed,
                 e.to_string()
             )))
-        })
+        })?;
+
+        match result {
+            Some(user) => Ok(user),
+            None => Err(DBAccessError::NotFoundError(get_error_message(
+                ErrorKey::UserGetByIdNotFound,
+                format!("ID = {}", id),
+            )))
+        }
     }
 
-    pub async fn get_user_by_name(&self, name: &str) -> Result<Option<User>, DBAccessError> {
-        sqlx::query_as!(
+    pub async fn get_user_by_name(&self, name: &str) -> Result<User, DBAccessError> {
+        let result = sqlx::query_as!(
             User,
             r#"
                 SELECT id, username, email, password_hash
@@ -79,7 +87,15 @@ impl UserRepository {
                 ErrorKey::UserGetByNameFailed,
                 e.to_string()
             )))
-        })
+        })?;
+
+        match result {
+            Some(user) => Ok(user),
+            None => Err(DBAccessError::NotFoundError(get_error_message(
+                ErrorKey::UserGetByNameNotFound,
+                format!("Name = {}", name),
+            )))
+        }
     }
 
     pub async fn get_all_users(&self) -> Result<Vec<User>, DBAccessError> {
@@ -100,13 +116,90 @@ impl UserRepository {
         })
     }
 
+    pub async fn get_users_count(&self) -> Result<i64, DBAccessError> {
+        sqlx::query_scalar!(
+            r#"
+                SELECT COUNT(*) FROM users
+            "#,
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| {
+            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::UserGetUsersCountFailed,
+                e.to_string()
+            )))
+        })
+    }
+
+    pub async fn get_users_with_pagenation(
+        &self,
+        page: &i32,
+        page_size: &i32,
+    ) -> Result<Vec<User>, DBAccessError> {
+        let offset = (page - 1) * page_size;
+        let limit = page_size;
+
+        let mut tx = self.pool.begin().await?;
+        let count = get_users_count_with_transaction(&mut tx).await?;
+
+        if offset as i64 >= count {
+            return Err(DBAccessError::NotFoundError(get_error_message(
+                ErrorKey::UserGetUsersWithPagenationFailed,
+                format!("Offset: {}, Count: {}", offset, count),
+            )));
+        }
+
+        let result = sqlx::query_as!(
+            User,
+            r#"
+                SELECT id, username, email, password_hash
+                FROM users
+                ORDER BY id
+                LIMIT $1 OFFSET $2
+            "#,
+            limit,
+            offset,
+        )
+        .fetch_all(&mut *tx)
+        .await;
+
+        match result {
+            Ok(users) => {
+                tx.commit().await.map_err(|e| {
+                    DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                        ErrorKey::UserGetAllFailed,
+                        e.to_string()
+                    )))
+                })?;
+                Ok(users)
+            }
+            Err(e) => {
+                let _ = tx.rollback().await;
+                Err(DBAccessError::QueryError(anyhow::anyhow!(
+                    get_error_message(ErrorKey::UserGetAllFailed, e.to_string())
+                )))
+            }
+        }
+    }
+
     pub async fn update_user(&self, user: User) -> Result<User, DBAccessError> {
         validate_user_id(user.id)?;
         validate_user_name(&user.username)?;
         validate_user_email(&user.email)?;
         validate_user_password(&user.password_hash)?;
 
-        sqlx::query_as!(
+        if user.id.is_none() {
+            return Err(DBAccessError::ValidationError(get_error_message(
+                ErrorKey::UserIdInvalid,
+                format!("ID = {:?}", user.id),
+            )));
+        }
+
+        let mut tx = self.pool.begin().await?;
+        let _ = get_user_by_id_with_transaction(&user.id.unwrap(), &mut tx).await?;
+
+        let result = sqlx::query_as!(
             User,
             r#"
                 UPDATE users
@@ -119,14 +212,29 @@ impl UserRepository {
             user.password_hash,
             user.id,
         )
-        .fetch_one(&self.pool)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(|e| {
             DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
                 ErrorKey::UserUpdateFailed,
                 e.to_string()
             )))
-        })
+        })?;
+
+        tx.commit().await.map_err(|e| {
+            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::UserUpdateFailed,
+                e.to_string()
+            )))
+        })?;
+
+        match result {
+            Some(user) => Ok(user),
+            None => Err(DBAccessError::NotFoundError(get_error_message(
+                ErrorKey::UserGetByIdNotFound,
+                format!("ID = {:?}", user.id),
+            )))
+        }
     }
 
     pub async fn delete_user(&self, id: i64) -> Result<(), DBAccessError> {
@@ -148,7 +256,7 @@ impl UserRepository {
         })?;
 
         if result.rows_affected() == 0 {
-            return Err(DBAccessError::ValidationError(get_error_message(
+            return Err(DBAccessError::NotFoundError(get_error_message(
                 ErrorKey::UserDeleteFailedByIdNotFound,
                 format!("ID = {}", id),
             )));
@@ -159,10 +267,10 @@ impl UserRepository {
 }
 
 pub async fn get_user_by_id_with_transaction(
-    id: i64,
+    id: &i64,
     tx: &mut Transaction<'_, Sqlite>,
-) -> Result<Option<User>, DBAccessError> {
-    sqlx::query_as!(
+) -> Result<User, DBAccessError> {
+    let result = sqlx::query_as!(
         User,
         r#"
             SELECT id, username, email, password_hash
@@ -176,6 +284,32 @@ pub async fn get_user_by_id_with_transaction(
     .map_err(|e| {
         DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
             ErrorKey::UserGetByIdFailed,
+            e.to_string()
+        )))
+    })?;
+
+    match result {
+        Some(user) => Ok(user),
+        None => Err(DBAccessError::NotFoundError(get_error_message(
+            ErrorKey::UserGetByIdNotFound,
+            format!("ID = {}", id),
+        )))
+    }
+}
+
+pub async fn get_users_count_with_transaction(
+    tx: &mut Transaction<'_, Sqlite>,
+) -> Result<i64, DBAccessError> {
+    sqlx::query_scalar!(
+        r#"
+            SELECT COUNT(*) FROM users
+        "#,
+    )
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(|e| {
+        DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+            ErrorKey::UserGetUsersCountFailed,
             e.to_string()
         )))
     })

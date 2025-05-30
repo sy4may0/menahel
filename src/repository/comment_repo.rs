@@ -25,14 +25,9 @@ impl CommentRepository {
         comment: &Comment,
         tx: &mut Transaction<'_, Sqlite>,
     ) -> Result<(), DBAccessError> {
-        let user = get_user_by_id_with_transaction(comment.user_id, tx).await?;
+        get_user_by_id_with_transaction(&comment.user_id, tx).await?;
         let task = get_task_by_id_with_transaction(comment.task_id, tx).await?;
-        if user.is_none() {
-            return Err(DBAccessError::ValidationError(get_error_message(
-                ErrorKey::CommentUserIdNotFound,
-                format!("ID = {}", comment.user_id),
-            )));
-        }
+
         if task.is_none() {
             return Err(DBAccessError::ValidationError(get_error_message(
                 ErrorKey::CommentTaskIdNotFound,

@@ -6,7 +6,7 @@ use chrono::Utc;
 use sqlx::sqlite::SqlitePool;
 
 #[cfg(test)]
-mod task_test {
+mod task_repo_test {
     use super::*;
 
     #[sqlx::test(fixtures("tasks"))]

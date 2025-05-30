@@ -21,13 +21,7 @@ impl UserAssignRepository {
         user_assign: &UserAssign,
         tx: &mut Transaction<'_, Sqlite>,
     ) -> Result<(), DBAccessError> {
-        let user = get_user_by_id_with_transaction(user_assign.user_id, tx).await?;
-        if user.is_none() {
-            return Err(DBAccessError::ValidationError(get_error_message(
-                ErrorKey::UserAssignUserIdNotFound,
-                format!("ID = {}", user_assign.user_id),
-            )));
-        }
+        get_user_by_id_with_transaction(&user_assign.user_id, tx).await?;
         let task = get_task_by_id_with_transaction(user_assign.task_id, tx).await?;
         if task.is_none() {
             return Err(DBAccessError::ValidationError(get_error_message(

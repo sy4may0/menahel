@@ -3,7 +3,7 @@ use crate::repository::comment_repo::{CommentRepository, get_comment_by_id_with_
 use sqlx::sqlite::SqlitePool;
 
 #[cfg(test)]
-mod comment_test {
+mod comment_repo_test {
     use super::*;
 
     #[sqlx::test(fixtures("comments"))]

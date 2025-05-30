@@ -4,7 +4,7 @@ use chrono::Utc;
 use sqlx::sqlite::SqlitePool;
 
 #[cfg(test)]
-mod project_test {
+mod project_repo_test {
     use crate::repository::project_repo::get_project_by_id_with_transaction;
 
     use super::*;
