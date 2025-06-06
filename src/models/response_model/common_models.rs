@@ -26,13 +26,13 @@ impl ErrorResponse {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Pagination {
     pub current_page: i32,
     pub page_size: i32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ResponseMetadata {
     pub request_id: String,
     pub api_version: String,

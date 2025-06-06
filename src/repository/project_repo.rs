@@ -17,7 +17,7 @@ impl ProjectRepository {
     pub async fn create_project(&self, project: Project) -> Result<Project, DBAccessError> {
         validate_project_id(project.id)?;
         validate_project_name(&project.name)?;
-        sqlx::query_as!(
+        let result = sqlx::query_as!(
             Project,
             r#"
                 INSERT INTO projects (name)
@@ -33,11 +33,15 @@ impl ProjectRepository {
                 ErrorKey::ProjectCreateFailed,
                 e.to_string()
             )))
-        })
+        })?;
+
+        log::info!("Created project: {:?}", result);
+
+        Ok(result)
     }
 
-    pub async fn get_project_by_id(&self, id: i64) -> Result<Option<Project>, DBAccessError> {
-        sqlx::query_as!(
+    pub async fn get_project_by_id(&self, id: i64) -> Result<Project, DBAccessError> {
+        let result = sqlx::query_as!(
             Project,
             r#"
                 SELECT id, name
@@ -53,11 +57,21 @@ impl ProjectRepository {
                 ErrorKey::ProjectGetByIdFailed,
                 e.to_string()
             )))
-        })
+        })?;
+
+        log::debug!("Got project by id: {:?}", result);
+
+        match result {
+            Some(project) => Ok(project),
+            None => Err(DBAccessError::NotFoundError(
+                get_error_message(ErrorKey::ProjectGetByIdNotFound,
+                format!("ID = {}", id)
+            )))
+        }
     }
 
-    pub async fn get_project_by_name(&self, name: &str) -> Result<Option<Project>, DBAccessError> {
-        sqlx::query_as!(
+    pub async fn get_project_by_name(&self, name: &str) -> Result<Project, DBAccessError> {
+        let result = sqlx::query_as!(
             Project,
             r#"
                 SELECT id, name
@@ -73,11 +87,21 @@ impl ProjectRepository {
                 ErrorKey::ProjectGetByNameFailed,
                 e.to_string()
             )))
-        })
+        })?;
+
+        log::debug!("Got project by name: {:?}", result);
+
+        match result {
+            Some(project) => Ok(project),
+            None => Err(DBAccessError::NotFoundError(
+                get_error_message(ErrorKey::ProjectGetByNameNotFound,
+                format!("Name = {}", name)
+            )))
+        }
     }
 
     pub async fn get_all_projects(&self) -> Result<Vec<Project>, DBAccessError> {
-        sqlx::query_as!(
+        let result = sqlx::query_as!(
             Project,
             r#"
                 SELECT id, name
@@ -91,14 +115,106 @@ impl ProjectRepository {
                 ErrorKey::ProjectGetAllFailed,
                 e.to_string()
             )))
-        })
+        })?;
+
+        log::debug!("Got all projects: {:?}", result);
+
+        Ok(result)
+    }
+
+    pub async fn get_projects_count(&self) -> Result<i64, DBAccessError> {
+        let result = sqlx::query_scalar!(
+            r#"
+                SELECT COUNT(*) FROM projects
+            "#,
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| {
+            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::ProjectGetProjectsCountFailed,
+                e.to_string()
+            )))
+        })?;
+        log::debug!("Got projects count: {:?}", result);
+
+        Ok(result)
+    }
+
+    pub async fn get_projects_with_pagenation(
+        &self,
+        page: &i32,
+        page_size: &i32,
+    ) -> Result<Vec<Project>, DBAccessError> {
+        let offset = (*page - 1) * *page_size;
+        let limit = *page_size;
+
+        let mut tx = self.pool.begin().await.map_err(
+            |e| {
+                DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                    ErrorKey::ProjectGetAllFailed,
+                    e.to_string()
+                )))
+            }
+        )?;
+        let count = get_projects_count_with_transaction(&mut tx).await?;
+
+        if offset as i64 > count {
+            return Err(DBAccessError::NotFoundError(get_error_message(
+                ErrorKey::ProjectGetPagenationNotFound,
+                format!("Offset = {}, Count = {}", offset, count)
+            )));
+        }
+        log::debug!("Get users with pagenation: offset: {}, limit: {}", offset, limit);
+
+        let result = sqlx::query_as!(
+            Project,
+            r#"
+                SELECT id, name
+                FROM projects
+                ORDER BY id
+                LIMIT $1 OFFSET $2
+            "#,
+            limit,
+            offset,
+        )
+        .fetch_all(&mut *tx)
+        .await;
+
+        match result {
+            Ok(projects) => {
+                log::debug!("Got projects with pagenation: {:?}", projects);
+                tx.commit().await.map_err(|e| {
+                    DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                        ErrorKey::ProjectGetAllFailed,
+                        e.to_string()
+                    )))
+                })?;
+                Ok(projects)
+            }
+            Err(e) => {
+                let rollback = tx.rollback().await;
+                match rollback {
+                    Ok(_) => {
+                        log::warn!("Transaction rolled back");
+                    }
+                    Err(e) => {
+                        log::error!("Failed to rollback transaction: {:?}", e);
+                    }
+                }
+                Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                    ErrorKey::ProjectGetAllFailed,
+                    e.to_string()
+                ))))
+            }
+        }
     }
 
     pub async fn update_project(&self, project: Project) -> Result<Project, DBAccessError> {
         validate_project_id(project.id)?;
         validate_project_name(&project.name)?;
 
-        sqlx::query_as!(
+        let result = sqlx::query_as!(
             Project,
             r#"
                 UPDATE projects
@@ -109,14 +225,24 @@ impl ProjectRepository {
             project.name,
             project.id,
         )
-        .fetch_one(&self.pool)
+        .fetch_optional(&self.pool)
         .await
         .map_err(|e| {
             DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
                 ErrorKey::ProjectUpdateFailed,
                 e.to_string()
             )))
-        })
+        })?;
+
+        log::info!("Updated project: {:?}", result);
+
+        match result {
+            Some(project) => Ok(project),
+            None => Err(DBAccessError::NotFoundError(
+                get_error_message(ErrorKey::ProjectUpdateFailed,
+                format!("ID = {:?}", project.id)
+            )))
+        }
     }
 
     pub async fn delete_project(&self, id: i64) -> Result<(), DBAccessError> {
@@ -145,6 +271,8 @@ impl ProjectRepository {
             )));
         }
 
+        log::info!("Deleted project: ID = {}", id);
+
         Ok(())
     }
 }
@@ -170,4 +298,26 @@ pub async fn get_project_by_id_with_transaction(
             e.to_string()
         )))
     })
+}
+
+pub async fn get_projects_count_with_transaction(
+    transaction: &mut Transaction<'_, Sqlite>,
+) -> Result<i64, DBAccessError> {
+    let result = sqlx::query_scalar!(
+        r#"
+            SELECT COUNT(*) FROM projects
+        "#,
+    )
+    .fetch_one(&mut **transaction)
+    .await
+    .map_err(|e| {
+        DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+            ErrorKey::ProjectGetProjectsCountFailed,
+            e.to_string()
+        )))
+    })?;
+
+    log::debug!("Got projects count: {:?}", result);
+
+    Ok(result)
 }

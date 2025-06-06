@@ -2,7 +2,7 @@ use crate::errors::db_error::DBAccessError;
 use crate::errors::messages::{ErrorKey, get_error_message};
 use crate::models::User;
 use crate::repository::validations::{
-    validate_user_email, validate_user_id, validate_user_name, validate_user_password,
+    validate_user_email, validate_user_id, validate_user_id_is_none, validate_user_name, validate_user_password,
 };
 use sqlx::{Pool, Sqlite, Transaction};
 
@@ -17,11 +17,12 @@ impl UserRepository {
 
     pub async fn create_user(&self, user: User) -> Result<User, DBAccessError> {
         validate_user_id(user.id)?;
+        validate_user_id_is_none(user.id)?;
         validate_user_name(&user.username)?;
         validate_user_email(&user.email)?;
         validate_user_password(&user.password_hash)?;
 
-        sqlx::query_as!(
+        let result = sqlx::query_as!(
             User,
             r#"
                 INSERT INTO users (username, email, password_hash)
@@ -39,7 +40,10 @@ impl UserRepository {
                 ErrorKey::UserCreateFailed,
                 e.to_string()
             )))
-        })
+        })?;
+        log::info!("Created user: {:?}", result);
+
+        Ok(result)
     }
 
     pub async fn get_user_by_id(&self, id: i64) -> Result<User, DBAccessError> {
@@ -60,6 +64,7 @@ impl UserRepository {
                 e.to_string()
             )))
         })?;
+        log::debug!("Get user by id: {:?}", result);
 
         match result {
             Some(user) => Ok(user),
@@ -88,6 +93,7 @@ impl UserRepository {
                 e.to_string()
             )))
         })?;
+        log::debug!("Get user by name: {:?}", result);
 
         match result {
             Some(user) => Ok(user),
@@ -99,7 +105,7 @@ impl UserRepository {
     }
 
     pub async fn get_all_users(&self) -> Result<Vec<User>, DBAccessError> {
-        sqlx::query_as!(
+        let result = sqlx::query_as!(
             User,
             r#"
                 SELECT id, username, email, password_hash
@@ -113,11 +119,14 @@ impl UserRepository {
                 ErrorKey::UserGetAllFailed,
                 e.to_string()
             )))
-        })
+        })?;
+        log::debug!("Get all users: {:?}", result);
+
+        Ok(result)
     }
 
     pub async fn get_users_count(&self) -> Result<i64, DBAccessError> {
-        sqlx::query_scalar!(
+        let result = sqlx::query_scalar!(
             r#"
                 SELECT COUNT(*) FROM users
             "#,
@@ -129,7 +138,10 @@ impl UserRepository {
                 ErrorKey::UserGetUsersCountFailed,
                 e.to_string()
             )))
-        })
+        })?;
+        log::debug!("Get users count: {:?}", result);
+
+        Ok(result)
     }
 
     pub async fn get_users_with_pagenation(
@@ -140,15 +152,21 @@ impl UserRepository {
         let offset = (page - 1) * page_size;
         let limit = page_size;
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.pool.begin().await.map_err(|e| {
+            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::ProjectGetAllFailed,
+                e.to_string()
+            )))
+        })?;
         let count = get_users_count_with_transaction(&mut tx).await?;
 
         if offset as i64 >= count {
             return Err(DBAccessError::NotFoundError(get_error_message(
-                ErrorKey::UserGetUsersWithPagenationFailed,
+                ErrorKey::UserGetUsersPagenationNotFound,
                 format!("Offset: {}, Count: {}", offset, count),
             )));
         }
+        log::debug!("Get users with pagenation: offset: {}, limit: {}", offset, limit);
 
         let result = sqlx::query_as!(
             User,
@@ -166,6 +184,7 @@ impl UserRepository {
 
         match result {
             Ok(users) => {
+                log::debug!("Get users with pagenation: {:?}", users);
                 tx.commit().await.map_err(|e| {
                     DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
                         ErrorKey::UserGetAllFailed,
@@ -175,7 +194,15 @@ impl UserRepository {
                 Ok(users)
             }
             Err(e) => {
-                let _ = tx.rollback().await;
+                let rollback = tx.rollback().await;
+                match rollback {
+                    Ok(_) => {
+                        log::warn!("Transaction rolled back");
+                    }
+                    Err(e) => {
+                        log::error!("Transaction rollback failed: {:?}", e);
+                    }
+                }
                 Err(DBAccessError::QueryError(anyhow::anyhow!(
                     get_error_message(ErrorKey::UserGetAllFailed, e.to_string())
                 )))
@@ -228,6 +255,8 @@ impl UserRepository {
             )))
         })?;
 
+        log::info!("Updated user: {:?}", result);
+
         match result {
             Some(user) => Ok(user),
             None => Err(DBAccessError::NotFoundError(get_error_message(
@@ -262,6 +291,8 @@ impl UserRepository {
             )));
         }
 
+        log::info!("Deleted user: {:?}", result);
+
         Ok(())
     }
 }
@@ -287,6 +318,7 @@ pub async fn get_user_by_id_with_transaction(
             e.to_string()
         )))
     })?;
+    log::debug!("Get user by id with transaction: {:?}", result);
 
     match result {
         Some(user) => Ok(user),
@@ -300,7 +332,7 @@ pub async fn get_user_by_id_with_transaction(
 pub async fn get_users_count_with_transaction(
     tx: &mut Transaction<'_, Sqlite>,
 ) -> Result<i64, DBAccessError> {
-    sqlx::query_scalar!(
+    let result = sqlx::query_scalar!(
         r#"
             SELECT COUNT(*) FROM users
         "#,
@@ -312,5 +344,8 @@ pub async fn get_users_count_with_transaction(
             ErrorKey::UserGetUsersCountFailed,
             e.to_string()
         )))
-    })
+    })?;
+    log::debug!("Get users count with transaction: {:?}", result);
+
+    Ok(result)
 }

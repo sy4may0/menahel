@@ -2,3 +2,4 @@
 /miscs
 .env
 env.sh
+/test_db

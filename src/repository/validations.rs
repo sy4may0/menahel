@@ -7,11 +7,22 @@ use regex::Regex;
 pub fn validate_user_id(id: Option<i64>) -> Result<(), DBAccessError> {
     if id.is_none() {
         return Ok(());
-    } else if id.is_some() && id.unwrap() > 0 {
+    } else if id.is_some() && id.unwrap() >= 0 {
         return Ok(());
     } else {
         return Err(DBAccessError::ValidationError(get_error_message(
             ErrorKey::UserIdInvalid,
+            format!("ID = {}", id.unwrap()),
+        )));
+    }
+}
+
+pub fn validate_user_id_is_none(id: Option<i64>) -> Result<(), DBAccessError> {
+    if id.is_none() {
+        return Ok(());
+    } else {
+        return Err(DBAccessError::ValidationError(get_error_message(
+            ErrorKey::UserIdMustBeNone,
             format!("ID = {}", id.unwrap()),
         )));
     }
@@ -90,7 +101,7 @@ pub fn validate_user_password(password: &str) -> Result<(), DBAccessError> {
 pub fn validate_project_id(id: Option<i64>) -> Result<(), DBAccessError> {
     if id.is_none() {
         return Ok(());
-    } else if id.is_some() && id.unwrap() > 0 {
+    } else if id.is_some() && id.unwrap() >= 0 {
         return Ok(());
     } else {
         return Err(DBAccessError::ValidationError(get_error_message(
@@ -121,7 +132,7 @@ pub fn validate_project_name(name: &str) -> Result<(), DBAccessError> {
 pub fn validate_task_id(id: Option<i64>) -> Result<(), DBAccessError> {
     if id.is_none() {
         return Ok(());
-    } else if id.is_some() && id.unwrap() > 0 {
+    } else if id.is_some() && id.unwrap() >= 0 {
         return Ok(());
     } else {
         return Err(DBAccessError::ValidationError(get_error_message(
@@ -132,7 +143,7 @@ pub fn validate_task_id(id: Option<i64>) -> Result<(), DBAccessError> {
 }
 
 pub fn validate_task_project_id(id: i64) -> Result<(), DBAccessError> {
-    if id <= 0 {
+    if id < 0 {
         return Err(DBAccessError::ValidationError(get_error_message(
             ErrorKey::TaskProjectIdInvalid,
             format!("ID = {}", id),
@@ -145,7 +156,7 @@ pub fn validate_task_project_id(id: i64) -> Result<(), DBAccessError> {
 pub fn validate_task_parent_id(id: Option<i64>) -> Result<(), DBAccessError> {
     if id.is_none() {
         return Ok(());
-    } else if id.is_some() && id.unwrap() > 0 {
+    } else if id.is_some() && id.unwrap() >= 0 {
         return Ok(());
     } else {
         return Err(DBAccessError::ValidationError(get_error_message(
@@ -233,7 +244,7 @@ pub fn validate_task_unix_timestamp_or_none(timestamp: Option<i64>) -> Result<()
 }
 
 pub fn validate_user_assign_user_id(id: i64) -> Result<(), DBAccessError> {
-    if id <= 0 {
+    if id < 0 {
         return Err(DBAccessError::ValidationError(get_error_message(
             ErrorKey::UserAssignUserIdInvalid,
             format!("ID = {}", id),
@@ -244,7 +255,7 @@ pub fn validate_user_assign_user_id(id: i64) -> Result<(), DBAccessError> {
 }
 
 pub fn validate_user_assign_task_id(id: i64) -> Result<(), DBAccessError> {
-    if id <= 0 {
+    if id < 0 {
         return Err(DBAccessError::ValidationError(get_error_message(
             ErrorKey::UserAssignTaskIdInvalid,
             format!("ID = {}", id),
@@ -255,7 +266,7 @@ pub fn validate_user_assign_task_id(id: i64) -> Result<(), DBAccessError> {
 }
 
 pub fn validate_comment_user_id(id: i64) -> Result<(), DBAccessError> {
-    if id <= 0 {
+    if id < 0 {
         return Err(DBAccessError::ValidationError(get_error_message(
             ErrorKey::CommentUserIdInvalid,
             format!("ID = {}", id),
@@ -266,7 +277,7 @@ pub fn validate_comment_user_id(id: i64) -> Result<(), DBAccessError> {
 }
 
 pub fn validate_comment_task_id(id: i64) -> Result<(), DBAccessError> {
-    if id <= 0 {
+    if id < 0 {
         return Err(DBAccessError::ValidationError(get_error_message(
             ErrorKey::CommentTaskIdInvalid,
             format!("ID = {}", id),

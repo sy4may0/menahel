@@ -1,2 +1,10 @@
 INSERT INTO projects (id, name) VALUES (1, 'Test Project 0');
 INSERT INTO projects (id, name) VALUES (2, 'Test Project 1');
+INSERT INTO projects (id, name) VALUES (3, 'Test Project 2');
+INSERT INTO projects (id, name) VALUES (4, 'Test Project 3');
+INSERT INTO projects (id, name) VALUES (5, 'Test Project 4');
+INSERT INTO projects (id, name) VALUES (6, 'Test Project 5');
+INSERT INTO projects (id, name) VALUES (7, 'Test Project 6');
+INSERT INTO projects (id, name) VALUES (8, 'Test Project 7');
+INSERT INTO projects (id, name) VALUES (9, 'Test Project 8');
+INSERT INTO projects (id, name) VALUES (10, 'Test Project 9');
