@@ -6,7 +6,6 @@ mod project_handler_test {
     use actix_web::{test,App,web};
     use crate::models::{Project, ProjectResponse};
     use crate::models::ErrorResponse;
-    use crate::errors::messages::ErrorKey;
     use crate::handlers::test::utils::setup_test_db;
 
     #[ctor::ctor]

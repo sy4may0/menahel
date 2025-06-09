@@ -165,4 +165,25 @@ pub fn add_task_error_messages(
         ErrorKey::TaskDeleteFailedByIdNotFound,
         task_delete_failed_by_id_not_found,
     );
+
+    let mut task_get_count_failed = HashMap::new();
+    task_get_count_failed.insert(
+        "en",
+        "Failed to get count of tasks due to database operation failure",
+    );
+    task_get_count_failed.insert("jp", "DB操作処理の問題によりタスクの件数の取得に失敗しました");
+    map.insert(ErrorKey::TaskGetCountFailed, task_get_count_failed);
+
+    let mut task_get_pagenation_not_found = HashMap::new();
+    task_get_pagenation_not_found.insert(
+        "en",
+        "No tasks found in the specified page",
+    );
+    task_get_pagenation_not_found.insert("jp", "指定ページ内にタスクが存在しません。");
+    map.insert(ErrorKey::TaskGetPagenationNotFound, task_get_pagenation_not_found);
+
+    let mut task_get_by_id_not_found = HashMap::new();
+    task_get_by_id_not_found.insert("en", "Task not found");
+    task_get_by_id_not_found.insert("jp", "タスクが見つかりません");
+    map.insert(ErrorKey::TaskGetByIdNotFound, task_get_by_id_not_found);
 } 

@@ -1,7 +1,7 @@
 use crate::errors::db_error::DBAccessError;
 use crate::errors::messages::{ErrorKey, get_error_message};
 use crate::models::Project;
-use crate::repository::validations::{validate_project_id, validate_project_name};
+use crate::repository::validations::{validate_pagination, validate_project_id, validate_project_name};
 use anyhow::Result;
 use sqlx::{Pool, Sqlite, Transaction};
 
@@ -146,6 +146,8 @@ impl ProjectRepository {
         page: &i32,
         page_size: &i32,
     ) -> Result<Vec<Project>, DBAccessError> {
+        validate_pagination(Some(page), Some(page_size))?;
+
         let offset = (*page - 1) * *page_size;
         let limit = *page_size;
 

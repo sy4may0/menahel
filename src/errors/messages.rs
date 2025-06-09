@@ -8,6 +8,7 @@ use crate::errors::message_def::user_assign::add_user_assign_error_messages;
 use crate::errors::message_def::comment::add_comment_error_messages;
 use crate::errors::message_def::user_handler::add_user_handler_error_messages;
 use crate::errors::message_def::project_handler::add_project_handler_error_messages;
+use crate::errors::message_def::task_handler::add_task_handler_error_messages;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ErrorKey {
@@ -74,6 +75,9 @@ pub enum ErrorKey {
     TaskUpdateFailed,
     TaskDeleteFailed,
     TaskDeleteFailedByIdNotFound,
+    TaskGetCountFailed,
+    TaskGetPagenationNotFound,
+    TaskGetByIdNotFound,
 
     // ユーザー割り当て関連のエラー
     UserAssignCreateFailed,
@@ -110,6 +114,12 @@ pub enum ErrorKey {
     CommentToNotMaxLevelTask,
     CommentContentTooLong,
 
+    // リポジトリ共通エラー
+    NoPageSpecified,
+    NoPageSizeSpecified,
+    InvalidPagination,
+    PageSizeTooLarge,
+
     // ユーザーハンドラ関連のエラー
     UserHandlerGetUsersInvalidPage,
     UserHandlerGetUsersInvalidTarget,
@@ -124,7 +134,14 @@ pub enum ErrorKey {
     ProjectHandlerGetProjectsNoNameSpecified,
     ProjectHandlerGetProjectsNoIdSpecified,
     ProjectHandlerPathAndBodyIdMismatch,
-    ProjectHandlerInvalidJsonPost
+    ProjectHandlerInvalidJsonPost,
+
+    // タスクハンドラ関連のエラー
+    TaskHandlerGetTasksInvalidPage,
+    TaskHandlerGetTasksInvalidTarget,
+    TaskHandlerGetTasksNoIdSpecified,
+    TaskHandlerInvalidJsonPost,
+    TaskHandlerPathAndBodyIdMismatch,
 }
 
 impl fmt::Display for ErrorKey {
@@ -199,6 +216,9 @@ impl fmt::Display for ErrorKey {
             ErrorKey::TaskUpdateFailed => write!(f, "TaskUpdateFailed"),
             ErrorKey::TaskDeleteFailed => write!(f, "TaskDeleteFailed"),
             ErrorKey::TaskDeleteFailedByIdNotFound => write!(f, "TaskDeleteFailedByIdNotFound"),
+            ErrorKey::TaskGetCountFailed => write!(f, "TaskGetCountFailed"),
+            ErrorKey::TaskGetPagenationNotFound => write!(f, "TaskGetPagenationNotFound"),
+            ErrorKey::TaskGetByIdNotFound => write!(f, "TaskGetByIdNotFound"),  
 
             // ユーザー割り当て関連のエラー
             ErrorKey::UserAssignCreateFailed => write!(f, "UserAssignCreateFailed"),
@@ -243,6 +263,12 @@ impl fmt::Display for ErrorKey {
             ErrorKey::CommentContentTooLong => write!(f, "CommentContentTooLong"),
             ErrorKey::CommentToNotMaxLevelTask => write!(f, "CommentToNotMaxLevelTask"),
 
+            // リポジトリ共通エラー
+            ErrorKey::NoPageSpecified => write!(f, "NoPageSpecified"),
+            ErrorKey::NoPageSizeSpecified => write!(f, "NoPageSizeSpecified"),
+            ErrorKey::InvalidPagination => write!(f, "InvalidPagination"),
+            ErrorKey::PageSizeTooLarge => write!(f, "PageSizeTooLarge"),
+
             // ユーザーハンドラ関連のエラー
             ErrorKey::UserHandlerGetUsersInvalidPage => write!(f, "UserHandlerGetUsersInvalidPage"),
             ErrorKey::UserHandlerGetUsersInvalidTarget => write!(f, "UserHandlerGetUsersInvalidTarget"),
@@ -258,6 +284,13 @@ impl fmt::Display for ErrorKey {
             ErrorKey::ProjectHandlerGetProjectsNoIdSpecified => write!(f, "ProjectHandlerGetProjectsNoIdSpecified"),
             ErrorKey::ProjectHandlerPathAndBodyIdMismatch => write!(f, "ProjectHandlerPathAndBodyIdMismatch"),
             ErrorKey::ProjectHandlerInvalidJsonPost => write!(f, "ProjectHandlerInvalidJsonPost"),
+
+            // タスクハンドラ関連のエラー
+            ErrorKey::TaskHandlerGetTasksInvalidPage => write!(f, "TaskHandlerGetTasksInvalidPage"),
+            ErrorKey::TaskHandlerGetTasksInvalidTarget => write!(f, "TaskHandlerGetTasksInvalidTarget"),
+            ErrorKey::TaskHandlerGetTasksNoIdSpecified => write!(f, "TaskHandlerGetTasksNoIdSpecified"),
+            ErrorKey::TaskHandlerInvalidJsonPost => write!(f, "TaskHandlerInvalidJsonPost"),
+            ErrorKey::TaskHandlerPathAndBodyIdMismatch => write!(f, "TaskHandlerPathAndBodyIdMismatch"),
         }
     }
 }
@@ -278,6 +311,7 @@ static ERROR_MESSAGES: Lazy<HashMap<ErrorKey, HashMap<&'static str, &'static str
         add_comment_error_messages(&mut map);
         add_user_handler_error_messages(&mut map);
         add_project_handler_error_messages(&mut map);
+        add_task_handler_error_messages(&mut map);
 
         map
     });

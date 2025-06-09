@@ -304,3 +304,42 @@ pub fn validate_comment_content(content: &str) -> Result<(), DBAccessError> {
 
     Ok(())
 }
+
+pub fn validate_pagination(page: Option<&i32>, page_size: Option<&i32>) -> Result<(), DBAccessError> {
+    if page.is_none() && page_size.is_some() {
+        return Err(DBAccessError::ValidationError(get_error_message(
+            ErrorKey::NoPageSpecified,
+            format!("Page = {:?}, PageSize = {:?}", page, page_size),
+        )));
+    }
+
+    if page.is_some() && page_size.is_none() {
+        return Err(DBAccessError::ValidationError(get_error_message(
+            ErrorKey::NoPageSizeSpecified,
+            format!("Page = {:?}, PageSize = {:?}", page, page_size),
+        )));
+    }
+
+    if page.is_none() && page_size.is_none() {
+        return Ok(());
+    }
+
+    let page = page.as_ref().unwrap();
+    let page_size = page_size.as_ref().unwrap();
+
+    if **page < 0 || **page_size <= 0 {
+        return Err(DBAccessError::ValidationError(get_error_message(
+            ErrorKey::InvalidPagination,
+            format!("Page = {}, PageSize = {}", *page, *page_size),
+        )));
+    }
+
+    if **page_size > 100 {
+        return Err(DBAccessError::ValidationError(get_error_message(
+            ErrorKey::PageSizeTooLarge,
+            format!("Page = {}, PageSize = {}", *page, *page_size),
+        )));
+    }
+
+    Ok(())
+}

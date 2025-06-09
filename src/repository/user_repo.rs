@@ -2,7 +2,7 @@ use crate::errors::db_error::DBAccessError;
 use crate::errors::messages::{ErrorKey, get_error_message};
 use crate::models::User;
 use crate::repository::validations::{
-    validate_user_email, validate_user_id, validate_user_id_is_none, validate_user_name, validate_user_password,
+    validate_pagination, validate_user_email, validate_user_id, validate_user_id_is_none, validate_user_name, validate_user_password
 };
 use sqlx::{Pool, Sqlite, Transaction};
 
@@ -149,6 +149,7 @@ impl UserRepository {
         page: &i32,
         page_size: &i32,
     ) -> Result<Vec<User>, DBAccessError> {
+        validate_pagination(Some(page), Some(page_size))?;
         let offset = (page - 1) * page_size;
         let limit = page_size;
 

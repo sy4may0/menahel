@@ -120,4 +120,19 @@ impl TaskFilter {
     pub fn set_updated_at_to(&mut self, updated_at_to: i64) {
         self.updated_at_to = Some(updated_at_to);
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.project_id.is_none() &&
+        self.parent_id.is_none() &&
+        self.level.is_none() &&
+        self.name.is_none() &&
+        self.description.is_none() &&
+        self.status.is_none() &&
+        self.deadline_from.is_none() &&
+        self.deadline_to.is_none() &&
+        self.created_at_from.is_none() &&
+        self.created_at_to.is_none() &&
+        self.updated_at_from.is_none() &&
+        self.updated_at_to.is_none()
+    }
 }
