@@ -3,13 +3,14 @@ use crate::models::project::Project;
 use crate::models::response_model::Pagination;
 use crate::models::response_model::ResponseMetadata;
 
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectResponse {
     pub results: Vec<Project>,
     pub count: i64,
     pub rc: i32,
     pub message: String,
-    pub pagenation: Option<Pagination>,
+    pub pagination: Option<Pagination>,
     pub metadata: Option<ResponseMetadata>,
 }
 
@@ -20,7 +21,7 @@ impl ProjectResponse {
             count,
             rc: 0,
             message: "OK".to_string(),
-            pagenation,
+            pagination: pagenation,
             metadata,
         }
     }

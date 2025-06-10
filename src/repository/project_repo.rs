@@ -141,7 +141,7 @@ impl ProjectRepository {
         Ok(result)
     }
 
-    pub async fn get_projects_with_pagenation(
+    pub async fn get_projects_with_pagination(
         &self,
         page: &i32,
         page_size: &i32,
@@ -163,11 +163,11 @@ impl ProjectRepository {
 
         if offset as i64 > count {
             return Err(DBAccessError::NotFoundError(get_error_message(
-                ErrorKey::ProjectGetPagenationNotFound,
+                ErrorKey::ProjectGetPaginationNotFound,
                 format!("Offset = {}, Count = {}", offset, count)
             )));
         }
-        log::debug!("Get users with pagenation: offset: {}, limit: {}", offset, limit);
+        log::debug!("Get users with pagination: offset: {}, limit: {}", offset, limit);
 
         let result = sqlx::query_as!(
             Project,
@@ -185,7 +185,7 @@ impl ProjectRepository {
 
         match result {
             Ok(projects) => {
-                log::debug!("Got projects with pagenation: {:?}", projects);
+                log::debug!("Got projects with pagination: {:?}", projects);
                 tx.commit().await.map_err(|e| {
                     DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
                         ErrorKey::ProjectGetAllFailed,

@@ -3,6 +3,7 @@ mod project_handler_test {
     use crate::handlers::project::get_projects;
     use crate::handlers::project::create_project;
     use crate::handlers::project::update_project;
+    use crate::handlers::project::delete_project;
     use actix_web::{test,App,web};
     use crate::models::{Project, ProjectResponse};
     use crate::models::ErrorResponse;
@@ -42,8 +43,8 @@ mod project_handler_test {
     }
 
     #[actix_web::test]
-    async fn test_get_users_with_pagenation() {
-        let pool = setup_test_db("project_handler_test", "test_get_users_with_pagenation").await;
+    async fn test_get_projects_with_pagination() {
+        let pool = setup_test_db("project_handler_test", "test_get_projects_with_pagination").await;
 
         let app = test::init_service(
             App::new().service(get_projects).app_data(web::Data::new(pool))
@@ -85,8 +86,8 @@ mod project_handler_test {
     }
 
     #[actix_web::test]
-    async fn test_get_projects_with_pagenation_over_page_size() {
-        let pool = setup_test_db("project_handler_test", "test_get_projects_with_pagenation_over_page_size").await;
+    async fn test_get_projects_with_pagination_over_page_size() {
+        let pool = setup_test_db("project_handler_test", "test_get_projects_with_pagination_over_page_size").await;
 
         let app = test::init_service(
             App::new().service(get_projects).app_data(web::Data::new(pool))
@@ -195,14 +196,29 @@ mod project_handler_test {
     }
 
     #[actix_web::test]
-    async fn test_get_projects_with_pagenation_no_page() {
-        let pool = setup_test_db("project_handler_test", "test_get_projects_with_pagenation_no_page").await;
+    async fn test_get_projects_with_pagination_no_page() {
+        let pool = setup_test_db("project_handler_test", "test_get_projects_with_pagination_no_page").await;
 
         let app = test::init_service(
             App::new().service(get_projects).app_data(web::Data::new(pool))
         ).await;
 
         let req = test::TestRequest::get().uri("/projects?page_size=10").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
+    }
+
+    #[actix_web::test]
+    async fn test_get_project_with_invalid_query() {
+        let pool = setup_test_db("project_handler_test", "test_get_project_with_invalid_query").await;
+
+        let app = test::init_service(
+            App::new().service(get_projects).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/projects?target=id&id=abc").to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
 
         assert_eq!(res.rc, 1);
@@ -297,8 +313,8 @@ mod project_handler_test {
     }
 
     #[actix_web::test]
-    async fn test_update_user() {
-        let pool = setup_test_db("project_handler_test", "test_update_user").await;
+    async fn test_update_project() {
+        let pool = setup_test_db("project_handler_test", "test_update_project").await;
 
         let app = test::init_service(
             App::new().service(update_project).service(get_projects).app_data(web::Data::new(pool))
@@ -328,8 +344,8 @@ mod project_handler_test {
     }
 
     #[actix_web::test]
-    async fn test_update_user_invalid_name() {
-        let pool = setup_test_db("project_handler_test", "test_update_user_invalid_name").await;
+    async fn test_update_project_invalid_name() {
+        let pool = setup_test_db("project_handler_test", "test_update_project_invalid_name").await;
 
         let app = test::init_service(
             App::new().service(update_project).service(get_projects).app_data(web::Data::new(pool))
@@ -348,8 +364,8 @@ mod project_handler_test {
     }
 
     #[actix_web::test]
-    async fn test_update_user_id_mismatch() {
-        let pool = setup_test_db("project_handler_test", "test_update_user_id_mismatch").await;
+    async fn test_update_project_id_mismatch() {
+        let pool = setup_test_db("project_handler_test", "test_update_project_id_mismatch").await;
 
         let app = test::init_service(
             App::new().service(update_project).service(get_projects).app_data(web::Data::new(pool))
@@ -368,8 +384,8 @@ mod project_handler_test {
     }   
 
     #[actix_web::test]
-    async fn test_update_user_id_not_exists() {
-        let pool = setup_test_db("project_handler_test", "test_update_user_id_not_exists").await;
+    async fn test_update_project_id_not_exists() {
+        let pool = setup_test_db("project_handler_test", "test_update_project_id_not_exists").await;
 
         let app = test::init_service(
             App::new().service(update_project).service(get_projects).app_data(web::Data::new(pool))
@@ -389,8 +405,8 @@ mod project_handler_test {
     }
 
     #[actix_web::test]
-    async fn test_update_user_duplicate_name() {
-        let pool = setup_test_db("project_handler_test", "test_update_user_id_invalid").await;
+    async fn test_update_project_duplicate_name() {
+        let pool = setup_test_db("project_handler_test", "test_update_project_duplicate_name").await;
 
         let app = test::init_service(
             App::new().service(update_project).service(get_projects).app_data(web::Data::new(pool))
@@ -408,10 +424,66 @@ mod project_handler_test {
         assert!(res.message.contains("InternalServerError"));
     }
 
+    #[actix_web::test]
+    async fn test_update_project_invalid_path() {
+        let pool = setup_test_db("project_handler_test", "test_update_project_invalid_path").await;
 
+        let app = test::init_service(
+            App::new().service(update_project).service(get_projects).app_data(web::Data::new(pool))
+        ).await;
 
+        let req = test::TestRequest::post().uri("/projects/abc").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
 
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
+    }
 
+    #[actix_web::test]
+    async fn test_delete_project() {
+        let pool = setup_test_db("project_handler_test", "test_delete_project").await;
 
+        let app = test::init_service(
+            App::new().service(delete_project).service(get_projects).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::delete().uri("/projects/9").to_request();
+        let res: ProjectResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 0);
+        assert_eq!(res.results.len(), 0);
+        assert_eq!(res.message, "OK");
+        assert_eq!(res.count, 0);
+    }
+
+    #[actix_web::test]
+    async fn test_delete_project_invalid_path() {
+        let pool = setup_test_db("project_handler_test", "test_delete_project_invalid_path").await;
+
+        let app = test::init_service(
+            App::new().service(delete_project).service(get_projects).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::delete().uri("/projects/abc").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
+    }
+
+    #[actix_web::test]
+    async fn test_delete_project_not_exists() {
+        let pool = setup_test_db("project_handler_test", "test_delete_project_not_exists").await;
+
+        let app = test::init_service(
+            App::new().service(delete_project).service(get_projects).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::delete().uri("/projects/100").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("NotFound"));
+    }
 
 }

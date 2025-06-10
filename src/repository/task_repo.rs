@@ -56,13 +56,6 @@ impl TaskRepository {
             return Ok(());
         } else {
             let parent_task = get_task_by_id_with_transaction(parent_id.unwrap(), tx).await?;
-            if parent_task.is_none() {
-                return Err(DBAccessError::ValidationError(get_error_message(
-                    ErrorKey::TaskParentIdNotFound,
-                    format!("ID = {}", parent_id.unwrap()),
-                )));
-            }
-            let parent_task = parent_task.unwrap();
             if parent_task.level != level - 1 {
                 return Err(DBAccessError::ValidationError(get_error_message(
                     ErrorKey::TaskParentLevelInvalid,
@@ -245,7 +238,7 @@ impl TaskRepository {
 
             if offset as i64 > count {
                 return Err(DBAccessError::NotFoundError(get_error_message(
-                    ErrorKey::TaskGetPagenationNotFound,
+                    ErrorKey::TaskGetPaginationNotFound,
                     format!("Offset = {}, Count = {}", offset, count),
                 )));
             }
@@ -310,6 +303,8 @@ impl TaskRepository {
         validate_task_unix_timestamp_or_none(task.deadline)?;
 
         let mut tx = self.pool.begin().await?;
+
+        let _ = get_task_by_id_with_transaction(task.id.unwrap(), &mut tx).await?;
 
         self.validate_project_id_is_exist(task.project_id, &mut tx)
             .await?;
@@ -532,7 +527,7 @@ fn validate_filter(filter: &TaskFilter) -> Result<()> {
 pub async fn get_task_by_id_with_transaction(
     id: i64,
     transaction: &mut Transaction<'_, Sqlite>,
-) -> Result<Option<Task>, DBAccessError> {
+) -> Result<Task, DBAccessError> {
     let result = sqlx::query_as!(
         Task,
         r#"
@@ -547,7 +542,13 @@ pub async fn get_task_by_id_with_transaction(
     .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::TaskGetByIdFailed, e.to_string()))))?;
 
     log::debug!("Get task by id with transaction: {:?}", result);
-    Ok(result)
+    match result {
+        Some(task) => Ok(task),
+        None => Err(DBAccessError::NotFoundError(get_error_message(
+            ErrorKey::TaskGetByIdNotFound,
+            format!("ID = {}", id),
+        ))),
+    }
 }
 
 pub async fn get_tasks_count_with_transaction(

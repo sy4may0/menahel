@@ -54,4 +54,14 @@ pub fn add_user_handler_error_messages(
     user_handler_invalid_json_post.insert("jp", "JSON形式が無効です");
     map.insert(ErrorKey::UserHandlerInvalidJsonPost, user_handler_invalid_json_post);
 
+    let mut user_handler_invalid_query = HashMap::new();
+    user_handler_invalid_query.insert("en", "Invalid query");
+    user_handler_invalid_query.insert("jp", "クエリが無効です");
+    map.insert(ErrorKey::UserHandlerInvalidQuery, user_handler_invalid_query);
+
+    let mut user_handler_invalid_path = HashMap::new();
+    user_handler_invalid_path.insert("en", "Invalid path");
+    user_handler_invalid_path.insert("jp", "パスが無効です");
+    map.insert(ErrorKey::UserHandlerInvalidPath, user_handler_invalid_path);
+
 }

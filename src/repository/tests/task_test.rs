@@ -974,7 +974,6 @@ mod task_repo_test {
 
         let task = get_task_by_id_with_transaction(1, &mut tx)
             .await
-            .unwrap()
             .unwrap();
         assert_eq!(task.id, Some(1));
     }
@@ -983,7 +982,7 @@ mod task_repo_test {
     async fn test_task_repo_get_task_by_id_with_transaction_not_found(pool: SqlitePool) {
         let mut tx = pool.begin().await.unwrap();
 
-        let task = get_task_by_id_with_transaction(100, &mut tx).await.unwrap();
-        assert!(task.is_none());
+        let result = get_task_by_id_with_transaction(100, &mut tx).await;
+        assert!(result.is_err());
     }
 }

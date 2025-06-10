@@ -153,9 +153,9 @@ mod user_repo_test {
     }
 
     #[sqlx::test(fixtures("user"))]
-    async fn test_user_repo_get_users_with_pagenation(pool: SqlitePool) {
+    async fn test_user_repo_get_users_with_pagination(pool: SqlitePool) {
         let user_repo = UserRepository::new(pool);
-        let retrieved_users = user_repo.get_users_with_pagenation(&1, &5).await.unwrap();
+        let retrieved_users = user_repo.get_users_with_pagination(&1, &5).await.unwrap();
         assert_eq!(retrieved_users.len(), 5);
         assert_eq!(retrieved_users[0].username, "Test User 0");
         assert_eq!(retrieved_users[1].username, "Test User 1");
@@ -163,7 +163,7 @@ mod user_repo_test {
         assert_eq!(retrieved_users[3].username, "Test User 3");
         assert_eq!(retrieved_users[4].username, "Test User 4");
 
-        let retrieved_users = user_repo.get_users_with_pagenation(&2, &5).await.unwrap();
+        let retrieved_users = user_repo.get_users_with_pagination(&2, &5).await.unwrap();
         assert_eq!(retrieved_users.len(), 5);
         assert_eq!(retrieved_users[0].username, "Test User 5");
         assert_eq!(retrieved_users[1].username, "Test User 6");
@@ -173,9 +173,9 @@ mod user_repo_test {
     }
 
     #[sqlx::test(fixtures("user"))]
-    async fn test_user_repo_get_users_with_pagenation_invalid_page(pool: SqlitePool) {
+    async fn test_user_repo_get_users_with_pagination_invalid_page(pool: SqlitePool) {
         let user_repo = UserRepository::new(pool);
-        let result = user_repo.get_users_with_pagenation(&100, &5).await;
+        let result = user_repo.get_users_with_pagination(&100, &5).await;
         assert!(result.is_err());
     }
 

@@ -28,4 +28,14 @@ pub fn add_task_handler_error_messages(
     task_handler_path_and_body_id_mismatch.insert("en", "Path ID and body ID mismatch");
     task_handler_path_and_body_id_mismatch.insert("jp", "パスIDとボディIDが一致しません");
     map.insert(ErrorKey::TaskHandlerPathAndBodyIdMismatch, task_handler_path_and_body_id_mismatch);
+
+    let mut task_handler_invalid_query = HashMap::new();
+    task_handler_invalid_query.insert("en", "Invalid query");
+    task_handler_invalid_query.insert("jp", "クエリが無効です");
+    map.insert(ErrorKey::TaskHandlerInvalidQuery, task_handler_invalid_query);
+
+    let mut task_handler_invalid_path = HashMap::new();
+    task_handler_invalid_path.insert("en", "Invalid path");
+    task_handler_invalid_path.insert("jp", "パスが無効です");
+    map.insert(ErrorKey::TaskHandlerInvalidPath, task_handler_invalid_path);
 }

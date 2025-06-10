@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod user_handler_test {
-    use crate::handlers::user::{get_users, create_user, update_user};
+    use crate::handlers::user::{get_users, create_user, update_user, delete_user};
     use actix_web::{test, App, web};
     use crate::models::{User, UserResponse};
     use crate::models::ErrorResponse;
@@ -46,8 +46,8 @@ mod user_handler_test {
     }
 
     #[actix_web::test]
-    async fn test_get_users_with_pagenation() {
-        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagenation").await;
+    async fn test_get_users_with_pagination() {
+        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagination").await;
 
         let app = test::init_service(
             App::new().service(get_users).app_data(web::Data::new(pool))
@@ -102,8 +102,8 @@ mod user_handler_test {
     }
 
     #[actix_web::test]
-    async fn test_get_users_with_pagenation_invalid_page() {
-        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagenation_invalid_page").await;
+    async fn test_get_users_with_pagination_invalid_page() {
+        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagination_invalid_page").await;
 
         let app = test::init_service(
             App::new().service(get_users).app_data(web::Data::new(pool))
@@ -116,8 +116,8 @@ mod user_handler_test {
     }
 
     #[actix_web::test]
-    async fn test_get_users_with_pagenation_over_page_size() {
-        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagenation_over_page_size").await;
+    async fn test_get_users_with_pagination_over_page_size() {
+        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagination_over_page_size").await;
 
         let app = test::init_service(
             App::new().service(get_users).app_data(web::Data::new(pool))
@@ -235,8 +235,8 @@ mod user_handler_test {
     }
 
     #[actix_web::test]
-    async fn test_get_users_with_pagenation_no_page_size() {
-        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagenation_no_page_size").await;
+    async fn test_get_users_with_pagination_no_page_size() {
+        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagination_no_page_size").await;
 
         let app = test::init_service(
             App::new().service(get_users).app_data(web::Data::new(pool))
@@ -249,8 +249,8 @@ mod user_handler_test {
     }
 
     #[actix_web::test]
-    async fn test_get_users_with_pagenation_no_page() {
-        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagenation_no_page").await;
+    async fn test_get_users_with_pagination_no_page() {
+        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagination_no_page").await;
 
         let app = test::init_service(
             App::new().service(get_users).app_data(web::Data::new(pool))
@@ -260,6 +260,20 @@ mod user_handler_test {
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
         assert!(res.message.contains(ErrorKey::UserHandlerGetUsersInvalidPage.to_string().as_str()));
+    }
+
+    #[actix_web::test]
+    async fn test_get_user_by_id_invalid_query() {
+        let pool = setup_test_db("user_handler_test", "test_get_user_by_id_invalid_query").await;
+
+        let app = test::init_service(
+            App::new().service(get_users).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/users?target=id&id=abc").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
     }
 
     #[actix_web::test]
@@ -593,5 +607,67 @@ mod user_handler_test {
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
         assert!(res.message.contains("InternalServerError"));
+    }
+
+    #[actix_web::test]
+    async fn test_update_user_invalid_path() {
+        let pool = setup_test_db("user_handler_test", "test_update_user_invalid_path").await;
+
+        let app = test::init_service(
+            App::new().service(update_user).service(get_users).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::post().set_json(User {
+            id: Some(1),
+            username: "testuser1_x".to_string(),
+            email: "test1_x@example.com".to_string(),
+            password_hash: "dummy_hash_1_x".to_string(),
+        }).uri("/users/abc").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
+    }
+
+    #[actix_web::test]
+    async fn test_delete_user() {
+        let pool = setup_test_db("user_handler_test", "test_delete_user").await;
+
+        let app = test::init_service(
+            App::new().service(delete_user).service(get_users).app_data(web::Data::new(pool))
+        ).await;
+        
+        let req = test::TestRequest::delete().uri("/users/1").to_request();
+        let res: UserResponse = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(res.rc, 0);
+        assert_eq!(res.message, "OK");
+        assert_eq!(res.results.len(), 0);
+    }
+
+    #[actix_web::test]
+    async fn test_delete_user_invalid_path() {
+        let pool = setup_test_db("user_handler_test", "test_delete_user_invalid_path").await;
+
+        let app = test::init_service(
+            App::new().service(delete_user).service(get_users).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::delete().uri("/users/abc").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
+    }
+
+    #[actix_web::test]
+    async fn test_delete_user_not_exists() {
+        let pool = setup_test_db("user_handler_test", "test_delete_user_not_exists").await;
+
+        let app = test::init_service(
+            App::new().service(delete_user).service(get_users).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::delete().uri("/users/100").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("NotFound"));
     }
 }

@@ -327,7 +327,7 @@ pub fn validate_pagination(page: Option<&i32>, page_size: Option<&i32>) -> Resul
     let page = page.as_ref().unwrap();
     let page_size = page_size.as_ref().unwrap();
 
-    if **page < 0 || **page_size <= 0 {
+    if **page < 1 || **page_size < 1 {
         return Err(DBAccessError::ValidationError(get_error_message(
             ErrorKey::InvalidPagination,
             format!("Page = {}, PageSize = {}", *page, *page_size),

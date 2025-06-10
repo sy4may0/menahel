@@ -146,12 +146,12 @@ pub fn add_user_error_messages(
     user_get_users_count_failed.insert("jp", "DB操作処理の問題によりユーザーの数の取得に失敗しました");
     map.insert(ErrorKey::UserGetUsersCountFailed, user_get_users_count_failed);
 
-    let mut user_get_users_pagenation_not_found = HashMap::new();
-    user_get_users_pagenation_not_found.insert(
+    let mut user_get_users_pagination_not_found = HashMap::new();
+    user_get_users_pagination_not_found.insert(
         "en",
         "No users found on the specified page",
     );
-    user_get_users_pagenation_not_found.insert("jp", "指定されたページにユーザーが存在しません");
-    map.insert(ErrorKey::UserGetUsersPagenationNotFound, user_get_users_pagenation_not_found);
+    user_get_users_pagination_not_found.insert("jp", "指定されたページにユーザーが存在しません");
+    map.insert(ErrorKey::UserGetUsersPaginationNotFound, user_get_users_pagination_not_found);
 
 }

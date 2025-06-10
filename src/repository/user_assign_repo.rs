@@ -22,13 +22,7 @@ impl UserAssignRepository {
         tx: &mut Transaction<'_, Sqlite>,
     ) -> Result<(), DBAccessError> {
         get_user_by_id_with_transaction(&user_assign.user_id, tx).await?;
-        let task = get_task_by_id_with_transaction(user_assign.task_id, tx).await?;
-        if task.is_none() {
-            return Err(DBAccessError::ValidationError(get_error_message(
-                ErrorKey::UserAssignTaskIdNotFound,
-                format!("ID = {}", user_assign.task_id),
-            )));
-        }
+        get_task_by_id_with_transaction(user_assign.task_id, tx).await?;
         Ok(())
     }
 
@@ -38,14 +32,7 @@ impl UserAssignRepository {
         tx: &mut Transaction<'_, Sqlite>,
     ) -> Result<(), DBAccessError> {
         let task = get_task_by_id_with_transaction(user_assign.task_id, tx).await?;
-        if task.is_none() {
-            return Err(DBAccessError::ValidationError(get_error_message(
-                ErrorKey::UserAssignTaskIdNotFound,
-                format!("ID = {}", user_assign.task_id),
-            )));
-        }
-
-        if task.unwrap().level != TaskLevel::max_level() as i64 {
+        if task.level != TaskLevel::max_level() as i64 {
             return Err(DBAccessError::ValidationError(get_error_message(
                 ErrorKey::UserAssignToNotMaxLevelTask,
                 format!("ID = {}", user_assign.task_id),

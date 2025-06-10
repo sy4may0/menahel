@@ -144,7 +144,7 @@ impl UserRepository {
         Ok(result)
     }
 
-    pub async fn get_users_with_pagenation(
+    pub async fn get_users_with_pagination(
         &self,
         page: &i32,
         page_size: &i32,
@@ -163,11 +163,11 @@ impl UserRepository {
 
         if offset as i64 >= count {
             return Err(DBAccessError::NotFoundError(get_error_message(
-                ErrorKey::UserGetUsersPagenationNotFound,
+                ErrorKey::UserGetUsersPaginationNotFound,
                 format!("Offset: {}, Count: {}", offset, count),
             )));
         }
-        log::debug!("Get users with pagenation: offset: {}, limit: {}", offset, limit);
+        log::debug!("Get users with pagination: offset: {}, limit: {}", offset, limit);
 
         let result = sqlx::query_as!(
             User,
@@ -185,7 +185,7 @@ impl UserRepository {
 
         match result {
             Ok(users) => {
-                log::debug!("Get users with pagenation: {:?}", users);
+                log::debug!("Get users with pagination: {:?}", users);
                 tx.commit().await.map_err(|e| {
                     DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
                         ErrorKey::UserGetAllFailed,

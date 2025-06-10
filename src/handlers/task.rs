@@ -1,12 +1,12 @@
-use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{get, post, delete, web, HttpRequest, HttpResponse, Responder};
 use serde::Deserialize;
 use crate::models::response_model::TaskResponse;
 use crate::models::response_model::ResponseMetadata;
 use crate::models::response_model::ErrorResponse;
 use crate::models::response_model::Pagination;
-use crate::models::response_model::PagenationStatus;
+use crate::models::response_model::PaginationStatus;
 use crate::handlers::utils::get_request_id;
-use crate::models::PagenationParams;
+use crate::models::PaginationParams;
 use crate::models::repository_model::task::{Task, TaskFilter};
 use crate::repository::task_repo::TaskRepository;
 use crate::errors::handler_errors::HandlerError;
@@ -102,25 +102,25 @@ impl GetTasksQuery {
     }
 }
 
-async fn get_tasks_with_pagenation (
-    pagination_params: &PagenationParams,
+async fn get_tasks_with_pagination (
+    pagination_params: &PaginationParams,
     task_filter: Option<&TaskFilter>,
     pool: SqlitePool
 ) -> Result<Vec<Task>, HandlerError> {
     let task_repo = TaskRepository::new(pool.clone());
 
     match pagination_params.status() {
-        PagenationStatus::Active => {
+        PaginationStatus::Active => {
             task_repo.get_tasks_by_filter(
                 task_filter, pagination_params.page(), pagination_params.page_size()
             ).await.map_err(HandlerError::from)
         }
-        PagenationStatus::Inactive => {
+        PaginationStatus::Inactive => {
             task_repo.get_tasks_by_filter(
                 task_filter, None, None
             ).await.map_err(HandlerError::from)
         }
-        PagenationStatus::Error => {
+        PaginationStatus::Error => {
             Err(HandlerError::BadRequest(get_error_message(ErrorKey::TaskHandlerGetTasksInvalidPage, format!("page: {:?}, page_size: {:?}", pagination_params.page(), pagination_params.page_size()))))
         }
     }
@@ -129,27 +129,27 @@ async fn get_tasks_with_pagenation (
 // GetTasksQueryにfilterが入っていれば、filterを使ってタスクを取得する
 async fn get_all_or_filtered_tasks(
     req: HttpRequest,
-    query: web::Query<GetTasksQuery>,
+    query: GetTasksQuery,
     pool: SqlitePool
 ) -> HttpResponse {
     let metadata = ResponseMetadata::new(
         get_request_id(&req)
     );
 
-    let mut pagenation_params = PagenationParams::new(query.page, query.page_size);
-    pagenation_params.validate();
+    let mut pagination_params = PaginationParams::new(query.page, query.page_size);
+    pagination_params.validate();
 
-    let result = get_tasks_with_pagenation(
-        &pagenation_params, query.get_task_filter().as_ref(), pool
+    let result = get_tasks_with_pagination(
+        &pagination_params, query.get_task_filter().as_ref(), pool
     ).await;
 
     match result {
         Ok(tasks) => {
             let len = tasks.len() as i64;
-            let pagenation = match pagenation_params.status() {
-                PagenationStatus::Active => {
-                    let page_size = pagenation_params.page_size().unwrap();
-                    let page = pagenation_params.page().unwrap();
+            let pagination = match pagination_params.status() {
+                PaginationStatus::Active => {
+                    let page_size = pagination_params.page_size().unwrap();
+                    let page = pagination_params.page().unwrap();
                     Some(Pagination {
                         current_page: *page,
                         page_size: *page_size,
@@ -157,7 +157,7 @@ async fn get_all_or_filtered_tasks(
                 }
                 _ => None,
             };
-            let response = TaskResponse::new(tasks, len, pagenation, Some(metadata));
+            let response = TaskResponse::new(tasks, len, pagination, Some(metadata));
             log::debug!("Response: {:?}", response);
             return HttpResponse::Ok().json(response);
         }
@@ -170,7 +170,7 @@ async fn get_all_or_filtered_tasks(
 
 async fn get_task_by_id (
     req: HttpRequest,
-    query: web::Query<GetTasksQuery>,
+    query: GetTasksQuery,
     pool: SqlitePool
 ) -> HttpResponse {
     let metadata = ResponseMetadata::new(
@@ -206,9 +206,21 @@ async fn get_task_by_id (
 #[get("/tasks")]
 pub async fn get_tasks(
     req: HttpRequest,
-    query: web::Query<GetTasksQuery>,
+    query: Result<web::Query<GetTasksQuery>, actix_web::Error>,
     pool: web::Data<SqlitePool>
 ) -> impl Responder {
+    let query = match query {
+        Ok(query) => query.into_inner(),
+        Err(e) => {
+            let error = HandlerError::BadRequest(
+                get_error_message(ErrorKey::TaskHandlerInvalidQuery,
+                format!("ActixWebError: {}", e)
+            ));
+            let response = ErrorResponse::new(error.to_string(), 1, None);
+            return handle_error(error, response);
+        }
+    };
+
     let target = match query.target() {
         Ok(target) => target,
         Err(e) => {
@@ -268,12 +280,24 @@ pub async fn create_task(
 pub async fn update_task(
     req: HttpRequest,
     task_data: Result<web::Json<Task>, actix_web::Error>,
-    path: web::Path<i64>,
+    path: Result<web::Path<i64>, actix_web::Error>,
     pool: web::Data<SqlitePool>
 ) -> HttpResponse {
     let metadata = ResponseMetadata::new(
         get_request_id(&req)
     );
+
+    let path = match path {
+        Ok(path) => path.into_inner(),
+        Err(e) => {
+            let error = HandlerError::BadRequest(
+                get_error_message(ErrorKey::TaskHandlerInvalidPath,
+                format!("ActixWebError: {}", e)
+            ));
+            let response = ErrorResponse::new(error.to_string(), 1, Some(metadata));
+            return handle_error(error, response);
+        }
+    };
 
     let task_data = match task_data {
         Ok(data) => data,
@@ -287,11 +311,10 @@ pub async fn update_task(
         }
     };
 
-    let path_id = path.into_inner();
-    if task_data.id.is_none() || (task_data.id.is_some() && task_data.id.unwrap() != path_id) {
+    if task_data.id.is_none() || (task_data.id.is_some() && task_data.id.unwrap() != path) {
         let e = HandlerError::BadRequest(
             get_error_message(ErrorKey::TaskHandlerPathAndBodyIdMismatch,
-            format!("path.id: {:?}, task_data.id: {:?}", path_id, task_data.id)
+            format!("path.id: {:?}, task_data.id: {:?}", path, task_data.id)
         ));
         let response = ErrorResponse::new(e.to_string(), 1, Some(metadata));
         return handle_error(e, response);
@@ -306,6 +329,43 @@ pub async fn update_task(
         Ok(task) => {
             let response = TaskResponse::new(vec![task], 1, None, Some(metadata));
             log::debug!("Response: {:?}", response);
+            return HttpResponse::Ok().json(response);
+        }
+        Err(e) => {
+            let response = ErrorResponse::new(e.to_string(), 1, Some(metadata));
+            return handle_error(e, response);
+        }
+    }
+}
+
+#[delete("/tasks/{id}")]
+pub async fn delete_task(
+    req: HttpRequest,
+    path: Result<web::Path<i64>, actix_web::Error>,
+    pool: web::Data<SqlitePool>
+) -> HttpResponse {
+    let metadata = ResponseMetadata::new(
+        get_request_id(&req)
+    );
+
+    let path = match path {
+        Ok(path) => path.into_inner(),
+        Err(e) => {
+            let error = HandlerError::BadRequest(
+                get_error_message(ErrorKey::TaskHandlerInvalidPath,
+                format!("ActixWebError: {}", e)
+            ));
+            let response = ErrorResponse::new(error.to_string(), 1, Some(metadata));
+            return handle_error(error, response);
+        }
+    };
+
+    let task_repo = TaskRepository::new(pool.get_ref().clone());
+    let task = task_repo.delete_task(path).await.map_err(HandlerError::from);
+
+    match task {
+        Ok(()) => {
+            let response = TaskResponse::new(vec![], 0, None, Some(metadata));
             return HttpResponse::Ok().json(response);
         }
         Err(e) => {

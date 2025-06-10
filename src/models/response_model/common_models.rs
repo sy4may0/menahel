@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RootResponse {
     pub message: String,
     pub rc: i32,
@@ -13,7 +13,7 @@ impl RootResponse {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ErrorResponse {
     pub message: String,
     pub rc: i32,
@@ -45,43 +45,43 @@ impl ResponseMetadata {
 }
 
 #[derive(Debug)]
-pub enum PagenationStatus {
+pub enum PaginationStatus {
     Active,
     Inactive,
     Error,
 }
 
 #[derive(Debug)]
-pub struct PagenationParams {
+pub struct PaginationParams {
     pub page: Option<i32>,
     pub page_size: Option<i32>,
-    pub status: PagenationStatus,
+    pub status: PaginationStatus,
 }
 
-impl PagenationParams {
+impl PaginationParams {
     pub fn new(page: Option<i32>, page_size: Option<i32>) -> Self {
-        Self { page, page_size, status: PagenationStatus::Inactive }
+        Self { page, page_size, status: PaginationStatus::Inactive }
     }
 
     pub fn validate(&mut self) {
         if self.page.is_none() && self.page_size.is_none() {
-            self.status = PagenationStatus::Inactive;
+            self.status = PaginationStatus::Inactive;
 
         } else if self.page.is_some() && self.page_size.is_some() {
             if self.page.unwrap() <= 0 {
-                self.status = PagenationStatus::Error;
+                self.status = PaginationStatus::Error;
             } else if self.page_size.unwrap() <= 0 || self.page_size.unwrap() > 101 {
-                self.status = PagenationStatus::Error;
+                self.status = PaginationStatus::Error;
             } else {
-                self.status = PagenationStatus::Active;
+                self.status = PaginationStatus::Active;
             }
 
         } else {
-            self.status = PagenationStatus::Error;
+            self.status = PaginationStatus::Error;
         }
     }
 
-    pub fn status(&self) -> &PagenationStatus {
+    pub fn status(&self) -> &PaginationStatus {
         &self.status
     }
 

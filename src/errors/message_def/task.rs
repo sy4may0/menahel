@@ -174,13 +174,13 @@ pub fn add_task_error_messages(
     task_get_count_failed.insert("jp", "DB操作処理の問題によりタスクの件数の取得に失敗しました");
     map.insert(ErrorKey::TaskGetCountFailed, task_get_count_failed);
 
-    let mut task_get_pagenation_not_found = HashMap::new();
-    task_get_pagenation_not_found.insert(
+    let mut task_get_pagination_not_found = HashMap::new();
+    task_get_pagination_not_found.insert(
         "en",
         "No tasks found in the specified page",
     );
-    task_get_pagenation_not_found.insert("jp", "指定ページ内にタスクが存在しません。");
-    map.insert(ErrorKey::TaskGetPagenationNotFound, task_get_pagenation_not_found);
+    task_get_pagination_not_found.insert("jp", "指定ページ内にタスクが存在しません。");
+    map.insert(ErrorKey::TaskGetPaginationNotFound, task_get_pagination_not_found);
 
     let mut task_get_by_id_not_found = HashMap::new();
     task_get_by_id_not_found.insert("en", "Task not found");

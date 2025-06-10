@@ -28,13 +28,7 @@ impl CommentRepository {
         get_user_by_id_with_transaction(&comment.user_id, tx).await?;
         let task = get_task_by_id_with_transaction(comment.task_id, tx).await?;
 
-        if task.is_none() {
-            return Err(DBAccessError::ValidationError(get_error_message(
-                ErrorKey::CommentTaskIdNotFound,
-                format!("ID = {}", comment.task_id),
-            )));
-        }
-        if task.unwrap().level != TaskLevel::max_level() as i64 {
+        if task.level != TaskLevel::max_level() as i64 {
             return Err(DBAccessError::ValidationError(get_error_message(
                 ErrorKey::CommentToNotMaxLevelTask,
                 format!("ID = {}", comment.task_id),

@@ -33,7 +33,7 @@ pub enum ErrorKey {
     UserGetUsersCountFailed,
     UserGetByIdNotFound,
     UserGetByNameNotFound,
-    UserGetUsersPagenationNotFound,
+    UserGetUsersPaginationNotFound,
 
     // プロジェクト関連のエラー
     ProjectIdInvalid,
@@ -50,7 +50,7 @@ pub enum ErrorKey {
     ProjectDeleteFailed,
     ProjectDeleteFailedByIdNotFound,
     ProjectGetProjectsCountFailed,
-    ProjectGetPagenationNotFound,
+    ProjectGetPaginationNotFound,
 
     // タスク関連のエラー
     TaskIdInvalid,
@@ -76,7 +76,7 @@ pub enum ErrorKey {
     TaskDeleteFailed,
     TaskDeleteFailedByIdNotFound,
     TaskGetCountFailed,
-    TaskGetPagenationNotFound,
+    TaskGetPaginationNotFound,
     TaskGetByIdNotFound,
 
     // ユーザー割り当て関連のエラー
@@ -127,6 +127,8 @@ pub enum ErrorKey {
     UserHandlerGetUsersNoIdSpecified,
     UserHandlerPathAndBodyIdMismatch,
     UserHandlerInvalidJsonPost,
+    UserHandlerInvalidQuery,
+    UserHandlerInvalidPath,
 
     // プロジェクトハンドラ関連のエラー
     ProjectHandlerGetProjectsInvalidPage,
@@ -135,6 +137,8 @@ pub enum ErrorKey {
     ProjectHandlerGetProjectsNoIdSpecified,
     ProjectHandlerPathAndBodyIdMismatch,
     ProjectHandlerInvalidJsonPost,
+    ProjectHandlerInvalidQuery,
+    ProjectHandlerInvalidPath,
 
     // タスクハンドラ関連のエラー
     TaskHandlerGetTasksInvalidPage,
@@ -142,6 +146,8 @@ pub enum ErrorKey {
     TaskHandlerGetTasksNoIdSpecified,
     TaskHandlerInvalidJsonPost,
     TaskHandlerPathAndBodyIdMismatch,
+    TaskHandlerInvalidQuery,
+    TaskHandlerInvalidPath,
 }
 
 impl fmt::Display for ErrorKey {
@@ -170,7 +176,7 @@ impl fmt::Display for ErrorKey {
             ErrorKey::UserGetUsersCountFailed => write!(f, "UserGetUsersCountFailed"),
             ErrorKey::UserGetByIdNotFound => write!(f, "UserGetByIdNotFound"),
             ErrorKey::UserGetByNameNotFound => write!(f, "UserGetByNameNotFound"),
-            ErrorKey::UserGetUsersPagenationNotFound => write!(f, "UserGetUsersPagenationNotFound"),
+            ErrorKey::UserGetUsersPaginationNotFound => write!(f, "UserGetUsersPaginationNotFound"),
 
             // プロジェクト関連のエラー
             ErrorKey::ProjectIdInvalid => write!(f, "ProjectIdInvalid"),
@@ -189,7 +195,7 @@ impl fmt::Display for ErrorKey {
                 write!(f, "ProjectDeleteFailedByIdNotFound")
             }
             ErrorKey::ProjectGetProjectsCountFailed => write!(f, "ProjectGetProjectsCountFailed"),
-            ErrorKey::ProjectGetPagenationNotFound => write!(f, "ProjectGetPagenationNotFound"),
+            ErrorKey::ProjectGetPaginationNotFound => write!(f, "ProjectGetPaginationNotFound"),
 
             // タスク関連のエラー
             ErrorKey::TaskIdInvalid => write!(f, "TaskIdInvalid"),
@@ -217,7 +223,7 @@ impl fmt::Display for ErrorKey {
             ErrorKey::TaskDeleteFailed => write!(f, "TaskDeleteFailed"),
             ErrorKey::TaskDeleteFailedByIdNotFound => write!(f, "TaskDeleteFailedByIdNotFound"),
             ErrorKey::TaskGetCountFailed => write!(f, "TaskGetCountFailed"),
-            ErrorKey::TaskGetPagenationNotFound => write!(f, "TaskGetPagenationNotFound"),
+            ErrorKey::TaskGetPaginationNotFound => write!(f, "TaskGetPaginationNotFound"),
             ErrorKey::TaskGetByIdNotFound => write!(f, "TaskGetByIdNotFound"),  
 
             // ユーザー割り当て関連のエラー
@@ -276,6 +282,8 @@ impl fmt::Display for ErrorKey {
             ErrorKey::UserHandlerGetUsersNoIdSpecified => write!(f, "UserHandlerGetUsersNoIdSpecified"),
             ErrorKey::UserHandlerPathAndBodyIdMismatch => write!(f, "UserHandlerPathAndBodyIdMismatch"),
             ErrorKey::UserHandlerInvalidJsonPost => write!(f, "UserHandlerInvalidJsonPost"),
+            ErrorKey::UserHandlerInvalidQuery => write!(f, "UserHandlerInvalidQuery"),
+            ErrorKey::UserHandlerInvalidPath => write!(f, "UserHandlerInvalidPath"),
 
             // プロジェクトハンドラ関連のエラー
             ErrorKey::ProjectHandlerGetProjectsInvalidPage => write!(f, "ProjectHandlerGetProjectsInvalidPage"),
@@ -284,6 +292,8 @@ impl fmt::Display for ErrorKey {
             ErrorKey::ProjectHandlerGetProjectsNoIdSpecified => write!(f, "ProjectHandlerGetProjectsNoIdSpecified"),
             ErrorKey::ProjectHandlerPathAndBodyIdMismatch => write!(f, "ProjectHandlerPathAndBodyIdMismatch"),
             ErrorKey::ProjectHandlerInvalidJsonPost => write!(f, "ProjectHandlerInvalidJsonPost"),
+            ErrorKey::ProjectHandlerInvalidQuery => write!(f, "ProjectHandlerInvalidQuery"),
+            ErrorKey::ProjectHandlerInvalidPath => write!(f, "ProjectHandlerInvalidPath"),
 
             // タスクハンドラ関連のエラー
             ErrorKey::TaskHandlerGetTasksInvalidPage => write!(f, "TaskHandlerGetTasksInvalidPage"),
@@ -291,6 +301,8 @@ impl fmt::Display for ErrorKey {
             ErrorKey::TaskHandlerGetTasksNoIdSpecified => write!(f, "TaskHandlerGetTasksNoIdSpecified"),
             ErrorKey::TaskHandlerInvalidJsonPost => write!(f, "TaskHandlerInvalidJsonPost"),
             ErrorKey::TaskHandlerPathAndBodyIdMismatch => write!(f, "TaskHandlerPathAndBodyIdMismatch"),
+            ErrorKey::TaskHandlerInvalidQuery => write!(f, "TaskHandlerInvalidQuery"),
+            ErrorKey::TaskHandlerInvalidPath => write!(f, "TaskHandlerInvalidPath"),
         }
     }
 }
