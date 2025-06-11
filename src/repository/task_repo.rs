@@ -198,7 +198,9 @@ impl TaskRepository {
         validate_pagination(page, page_size)?;
 
         let mut query= String::from(r#"
-            SELECT id, project_id, parent_id, level, name, description, status, deadline, created_at, updated_at
+            SELECT 
+                tasks.id, tasks.project_id, tasks.parent_id, tasks.level, tasks.name, 
+                tasks.description, tasks.status, tasks.deadline, tasks.created_at, tasks.updated_at
             FROM tasks
         "#);
         let mut page_bind_values: Vec<i32> = Vec::new();
@@ -389,39 +391,39 @@ fn build_where_clause(filter: &TaskFilter) -> (String, Vec<FilterValue>) {
 
     let mut index = 1;
     if filter.project_id.is_some() {
-        where_calses.push(format!("project_id = ${}", index));
+        where_calses.push(format!("tasks.project_id = ${}", index));
         bind_values.push(FilterValue::I64(filter.project_id.unwrap()));
         index += 1;
     }
     if filter.parent_id.is_some() {
-        where_calses.push(format!("parent_id = ${}", index));
+        where_calses.push(format!("tasks.parent_id = ${}", index));
         bind_values.push(FilterValue::I64(filter.parent_id.unwrap()));
         index += 1;
     }
     if filter.level.is_some() {
-        where_calses.push(format!("level = ${}", index));
+        where_calses.push(format!("tasks.level = ${}", index));
         bind_values.push(FilterValue::I64(filter.level.unwrap()));
         index += 1;
     }
     if filter.name.is_some() {
-        where_calses.push(format!("name LIKE '%' || ${} || '%'", index));
+        where_calses.push(format!("tasks.name LIKE '%' || ${} || '%'", index));
         bind_values.push(FilterValue::String(filter.name.as_ref().unwrap().clone()));
         index += 1;
     }
     if filter.description.is_some() {
-        where_calses.push(format!("description LIKE '%' || ${} || '%'", index));
+        where_calses.push(format!("tasks.description LIKE '%' || ${} || '%'", index));
         bind_values.push(FilterValue::String(filter.description.as_ref().unwrap().clone()));
         index += 1;
     }
     if filter.status.is_some() {
-        where_calses.push(format!("status = ${}", index));
+        where_calses.push(format!("tasks.status = ${}", index));
         bind_values.push(FilterValue::I64(filter.status.unwrap()));
         index += 1;
     }
 
     if filter.deadline_from.is_some() && filter.deadline_to.is_some() {
         where_calses.push(format!(
-            "deadline >= ${} AND deadline <= ${}",
+            "tasks.deadline >= ${} AND tasks.deadline <= ${}",
             index,
             index + 1
         ));
@@ -429,18 +431,18 @@ fn build_where_clause(filter: &TaskFilter) -> (String, Vec<FilterValue>) {
         bind_values.push(FilterValue::I64(filter.deadline_to.unwrap()));
         index += 2;
     } else if filter.deadline_from.is_some() && filter.deadline_to.is_none() {
-        where_calses.push(format!("deadline >= ${}", index));
+        where_calses.push(format!("tasks.deadline >= ${}", index));
         bind_values.push(FilterValue::I64(filter.deadline_from.unwrap()));
         index += 1;
     } else if filter.deadline_to.is_some() && filter.deadline_from.is_none() {
-        where_calses.push(format!("deadline <= ${}", index));
+        where_calses.push(format!("tasks.deadline <= ${}", index));
         bind_values.push(FilterValue::I64(filter.deadline_to.unwrap()));
         index += 1;
     }
 
     if filter.created_at_from.is_some() && filter.created_at_to.is_some() {
         where_calses.push(format!(
-            "created_at >= ${} AND created_at <= ${}",
+            "tasks.created_at >= ${} AND tasks.created_at <= ${}",
             index,
             index + 1
         ));
@@ -448,28 +450,28 @@ fn build_where_clause(filter: &TaskFilter) -> (String, Vec<FilterValue>) {
         bind_values.push(FilterValue::I64(filter.created_at_to.unwrap()));
         index += 2;
     } else if filter.created_at_from.is_some() && filter.created_at_to.is_none() {
-        where_calses.push(format!("created_at >= ${}", index));
+        where_calses.push(format!("tasks.created_at >= ${}", index));
         bind_values.push(FilterValue::I64(filter.created_at_from.unwrap()));
         index += 1;
     } else if filter.created_at_to.is_some() && filter.created_at_from.is_none() {
-        where_calses.push(format!("created_at <= ${}", index));
+        where_calses.push(format!("tasks.created_at <= ${}", index));
         bind_values.push(FilterValue::I64(filter.created_at_to.unwrap()));
         index += 1;
     }
 
     if filter.updated_at_from.is_some() && filter.updated_at_to.is_some() {
         where_calses.push(format!(
-            "updated_at >= ${} AND updated_at <= ${}",
+            "tasks.updated_at >= ${} AND tasks.updated_at <= ${}",
             index,
             index + 1
         ));
         bind_values.push(FilterValue::I64(filter.updated_at_from.unwrap()));
         bind_values.push(FilterValue::I64(filter.updated_at_to.unwrap()));
     } else if filter.updated_at_from.is_some() && filter.updated_at_to.is_none() {
-        where_calses.push(format!("updated_at >= ${}", index));
+        where_calses.push(format!("tasks.updated_at >= ${}", index));
         bind_values.push(FilterValue::I64(filter.updated_at_from.unwrap()));
     } else if filter.updated_at_to.is_some() && filter.updated_at_from.is_none() {
-        where_calses.push(format!("updated_at <= ${}", index));
+        where_calses.push(format!("tasks.updated_at <= ${}", index));
         bind_values.push(FilterValue::I64(filter.updated_at_to.unwrap()));
     }
 

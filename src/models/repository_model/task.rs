@@ -53,6 +53,7 @@ pub struct TaskFilter {
     pub created_at_to: Option<i64>,
     pub updated_at_from: Option<i64>,
     pub updated_at_to: Option<i64>,
+    pub assignee_id: Option<i64>,
 }
 
 impl TaskFilter {
@@ -70,6 +71,7 @@ impl TaskFilter {
             created_at_to: None,
             updated_at_from: None,
             updated_at_to: None,
+            assignee_id: None,
         }
     }
 
@@ -121,6 +123,10 @@ impl TaskFilter {
         self.updated_at_to = Some(updated_at_to);
     }
 
+    pub fn set_assignee_id(&mut self, assignee_id: i64) {
+        self.assignee_id = Some(assignee_id);
+    }
+
     pub fn is_empty(&self) -> bool {
         self.project_id.is_none() &&
         self.parent_id.is_none() &&
@@ -133,6 +139,7 @@ impl TaskFilter {
         self.created_at_from.is_none() &&
         self.created_at_to.is_none() &&
         self.updated_at_from.is_none() &&
-        self.updated_at_to.is_none()
+        self.updated_at_to.is_none() &&
+        self.assignee_id.is_none()
     }
 }

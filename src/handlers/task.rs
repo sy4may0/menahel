@@ -49,6 +49,7 @@ struct GetTasksQuery {
     created_at_to: Option<i64>,
     updated_at_from: Option<i64>,
     updated_at_to: Option<i64>,
+    assignee_id: Option<i64>,
 }
 
 impl GetTasksQuery {
@@ -93,6 +94,7 @@ impl GetTasksQuery {
             created_at_to: self.created_at_to,
             updated_at_from: self.updated_at_from,
             updated_at_to: self.updated_at_to,
+            assignee_id: self.assignee_id,
         };
 
         match filter.is_empty() {
