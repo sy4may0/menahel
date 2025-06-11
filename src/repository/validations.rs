@@ -243,6 +243,19 @@ pub fn validate_task_unix_timestamp_or_none(timestamp: Option<i64>) -> Result<()
     }
 }
 
+pub fn validate_user_assign_id(id: Option<i64>) -> Result<(), DBAccessError> {
+    if id.is_none() {
+        return Ok(());
+    } else if id.is_some() && id.unwrap() >= 0 {
+        return Ok(());
+    } else {
+        return Err(DBAccessError::ValidationError(get_error_message(
+            ErrorKey::UserAssignIdInvalid,
+            format!("ID = {}", id.unwrap()),
+        )));
+    }
+}
+
 pub fn validate_user_assign_user_id(id: i64) -> Result<(), DBAccessError> {
     if id < 0 {
         return Err(DBAccessError::ValidationError(get_error_message(

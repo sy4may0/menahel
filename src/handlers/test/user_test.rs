@@ -636,7 +636,7 @@ mod user_handler_test {
             App::new().service(delete_user).service(get_users).app_data(web::Data::new(pool))
         ).await;
         
-        let req = test::TestRequest::delete().uri("/users/1").to_request();
+        let req = test::TestRequest::delete().uri("/users/9").to_request();
         let res: UserResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 0);
         assert_eq!(res.message, "OK");

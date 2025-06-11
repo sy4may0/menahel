@@ -7,3 +7,5 @@ mod user_test;
 mod project_test;
 #[cfg(test)]
 mod task_test;
+#[cfg(test)]
+mod user_assign_test;

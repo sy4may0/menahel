@@ -150,4 +150,19 @@ pub fn add_comment_error_messages(
         ErrorKey::CommentToNotMaxLevelTask,
         comment_to_not_max_level_task,
     );
+
+    let mut comment_get_by_id_not_found = HashMap::new();
+    comment_get_by_id_not_found.insert("en", "Comment not found");
+    comment_get_by_id_not_found.insert("jp", "コメントが見つかりません");
+    map.insert(ErrorKey::CommentGetByIdNotFound, comment_get_by_id_not_found);
+
+    let mut comment_get_pagination_not_found = HashMap::new();
+    comment_get_pagination_not_found.insert("en", "No comments found in the specified page");
+    comment_get_pagination_not_found.insert("jp", "指定ページ内にコメントが存在しません。");
+    map.insert(ErrorKey::CommentGetPaginationNotFound, comment_get_pagination_not_found);
+
+    let mut comment_get_count_failed = HashMap::new();
+    comment_get_count_failed.insert("en", "Failed to get comments count due to database operation failure");
+    comment_get_count_failed.insert("jp", "DB操作処理の問題によりコメントの数の取得に失敗しました");
+    map.insert(ErrorKey::CommentGetCountFailed, comment_get_count_failed);
 } 

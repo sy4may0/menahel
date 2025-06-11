@@ -739,7 +739,7 @@ mod task_handler_test {
             App::new().service(delete_task).service(get_tasks).app_data(web::Data::new(pool))
         ).await;
 
-        let req = test::TestRequest::delete().uri("/tasks/10").to_request();
+        let req = test::TestRequest::delete().uri("/tasks/9").to_request();
         let res: TaskResponse = test::call_and_read_body_json(&app, req).await;
 
         assert_eq!(res.rc, 0);

@@ -73,3 +73,14 @@ INSERT INTO tasks
     (id, name, description, level, status, project_id, parent_id, deadline, created_at, updated_at)
 VALUES 
     (10, 'TestTrivialTaskProject2', 'TestTask10Description', 2, 0, 2, 0, 1000000000, 1000000000, 1000000000);
+
+INSERT INTO user_assign (id, user_id, task_id) VALUES (0, 0, 2);
+INSERT INTO user_assign (id, user_id, task_id) VALUES (1, 0, 3);
+INSERT INTO user_assign (id, user_id, task_id) VALUES (2, 0, 4);
+INSERT INTO user_assign (id, user_id, task_id) VALUES (3, 0, 5);
+INSERT INTO user_assign (id, user_id, task_id) VALUES (4, 0, 6);
+INSERT INTO user_assign (id, user_id, task_id) VALUES (5, 1, 2);
+INSERT INTO user_assign (id, user_id, task_id) VALUES (6, 1, 3);
+INSERT INTO user_assign (id, user_id, task_id) VALUES (7, 1, 4);
+INSERT INTO user_assign (id, user_id, task_id) VALUES (8, 2, 2);
+INSERT INTO user_assign (id, user_id, task_id) VALUES (9, 2, 10);
