@@ -315,10 +315,10 @@ pub async fn update_project(
         }
     };
 
-    if project_data.id.is_none() || (project_data.id.is_some() && project_data.id.unwrap() != path) {
+    if project_data.project_id.is_none() || (project_data.project_id.is_some() && project_data.project_id.unwrap() != path) {
         let error = HandlerError::BadRequest(
             get_error_message(ErrorKey::ProjectHandlerPathAndBodyIdMismatch, 
-            format!("path_id: {:?}, body_id: {:?}", path, project_data.id))
+            format!("path_id: {:?}, body_id: {:?}", path, project_data.project_id))
         );
         let response = ErrorResponse::new(error.to_string(), 1, Some(metadata));
         return handle_error(error, response);

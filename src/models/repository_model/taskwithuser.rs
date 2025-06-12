@@ -1,46 +1,23 @@
 use serde::{Deserialize, Serialize};
+use crate::models::repository_model::task::Task;
+use crate::models::repository_model::user::UserNoPassword;
+use crate::models::repository_model::task::TaskFilter;
+use crate::models::repository_model::user::UserFilter;
 
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-pub struct Task {
-    pub task_id: Option<i64>,
-    pub project_id: i64,
-    pub parent_id: Option<i64>,
-    pub level: i64,
-    pub name: String,
-    pub description: Option<String>,
-    pub status: i64,
-    pub deadline: Option<i64>,
-    pub created_at: i64,
-    pub updated_at: Option<i64>,
-}
-
-impl Task {
-    pub fn new(
-        project_id: i64,
-        parent_id: Option<i64>,
-        level: i64,
-        name: String,
-        description: Option<String>,
-        status: i64,
-        deadline: Option<i64>,
-    ) -> Self {
-        Self {
-            task_id: None,
-            project_id,
-            parent_id,
-            level,
-            name,
-            description,
-            status,
-            deadline,
-            created_at: 0,
-            updated_at: None,
-        }
-    }
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FixedTaskWithUser {
+    pub task: Task,
+    pub users: Vec<UserNoPassword>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct TaskFilter {
+pub struct FixedUserWithTask {
+    pub user: UserNoPassword,
+    pub tasks: Vec<Task>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TaskWithUserFilter {
     pub project_id: Option<i64>,
     pub parent_id: Option<i64>,
     pub level: Option<i64>,
@@ -53,10 +30,11 @@ pub struct TaskFilter {
     pub created_at_to: Option<i64>,
     pub updated_at_from: Option<i64>,
     pub updated_at_to: Option<i64>,
-    pub assignee_id: Option<i64>,
+    pub username: Option<String>,
+    pub email: Option<String>,
 }
 
-impl TaskFilter {
+impl TaskWithUserFilter {
     pub fn new() -> Self {
         Self {
             project_id: None,
@@ -71,7 +49,8 @@ impl TaskFilter {
             created_at_to: None,
             updated_at_from: None,
             updated_at_to: None,
-            assignee_id: None, // 現在未使用
+            username: None,
+            email: None,
         }
     }
 
@@ -123,8 +102,12 @@ impl TaskFilter {
         self.updated_at_to = Some(updated_at_to);
     }
 
-    pub fn set_assignee_id(&mut self, assignee_id: i64) {
-        self.assignee_id = Some(assignee_id);
+    pub fn set_username(&mut self, username: String) {
+        self.username = Some(username);
+    }
+
+    pub fn set_email(&mut self, email: String) {
+        self.email = Some(email);
     }
 
     pub fn is_empty(&self) -> bool {
@@ -140,6 +123,40 @@ impl TaskFilter {
         self.created_at_to.is_none() &&
         self.updated_at_from.is_none() &&
         self.updated_at_to.is_none() &&
-        self.assignee_id.is_none()
+        self.username.is_none() &&
+        self.email.is_none()
+    }
+
+    pub fn build_task_filter(&self) -> Option<TaskFilter> {
+        let task_filter = TaskFilter {
+            project_id: self.project_id,
+            parent_id: self.parent_id,
+            level: self.level,
+            name: self.name.clone(),
+            description: self.description.clone(),
+            status: self.status,
+            deadline_from: self.deadline_from,
+            deadline_to: self.deadline_to,
+            created_at_from: self.created_at_from,
+            created_at_to: self.created_at_to,
+            updated_at_from: self.updated_at_from,
+            updated_at_to: self.updated_at_to,
+            assignee_id: None
+        };
+        match self.is_empty() {
+            true => None,
+            false => Some(task_filter),
+        }
+    }
+
+    pub fn build_user_filter(&self) -> Option<UserFilter> {
+        let user_filter = UserFilter {
+            username: self.username.clone(),
+            email: self.email.clone(),
+        };
+        match self.is_empty() {
+            true => None,
+            false => Some(user_filter),
+        }
     }
 }

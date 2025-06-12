@@ -7,6 +7,7 @@ use crate::repository::user_repo::get_user_by_id_with_transaction;
 use crate::repository::validations::{validate_pagination, validate_user_assign_id, validate_user_assign_task_id, validate_user_assign_user_id};
 use sqlx::{Pool, Sqlite, Transaction};
 use anyhow::Result;
+use std::collections::HashMap;
 
 pub struct UserAssignRepository {
     pool: Pool<Sqlite>,
@@ -88,7 +89,7 @@ impl UserAssignRepository {
             r#"
                 INSERT INTO user_assign (user_id, task_id)
                 VALUES ($1, $2)
-                RETURNING id, user_id, task_id
+                RETURNING user_assign_id, user_id, task_id
             "#,
             user_assign.user_id,
             user_assign.task_id,
@@ -123,9 +124,9 @@ impl UserAssignRepository {
         let result = sqlx::query_as!(
             UserAssign,
             r#"
-                SELECT id, user_id, task_id
+                SELECT user_assign_id, user_id, task_id
                 FROM user_assign
-                WHERE id = $1
+                WHERE user_assign_id = $1
             "#,
             id,
         )
@@ -152,7 +153,7 @@ impl UserAssignRepository {
         let result = sqlx::query_as!(
             UserAssign,
             r#"
-                SELECT id, user_id, task_id
+                SELECT user_assign_id, user_id, task_id
                 FROM user_assign
             "#,
         )
@@ -216,9 +217,9 @@ impl UserAssignRepository {
         let result = sqlx::query_as!(
             UserAssign,
             r#"
-                SELECT id, user_id, task_id
+                SELECT user_assign_id, user_id, task_id
                 FROM user_assign
-                ORDER BY id
+                ORDER BY user_assign_id
                 LIMIT $1 OFFSET $2
             "#,
             limit,
@@ -263,7 +264,7 @@ impl UserAssignRepository {
         validate_pagination(page, page_size)?;
 
         let mut query = String::from(r#"
-            SELECT id, user_id, task_id
+            SELECT user_assign_id, user_id, task_id
             FROM user_assign
         "#);
         let mut page_bind_values: Vec<i32> = Vec::new();
@@ -348,10 +349,10 @@ impl UserAssignRepository {
         validate_user_assign_user_id(user_assign.user_id)?;
         validate_user_assign_task_id(user_assign.task_id)?;
 
-        if user_assign.id.is_none() {
+        if user_assign.user_assign_id.is_none() {
             return Err(DBAccessError::ValidationError(get_error_message(
                 ErrorKey::UserIdInvalid,
-                format!("ID = {:?}", user_assign.id),
+                format!("ID = {:?}", user_assign.user_assign_id),
             )));
         }
 
@@ -369,12 +370,12 @@ impl UserAssignRepository {
             r#"
                 UPDATE user_assign
                 SET user_id = $1, task_id = $2
-                WHERE id = $3
-                RETURNING id, user_id, task_id
+                WHERE user_assign_id = $3
+                RETURNING user_assign_id, user_id, task_id
             "#,
             user_assign.user_id,
             user_assign.task_id,
-            user_assign.id,
+            user_assign.user_assign_id,
         )
         .fetch_optional(&mut *tx)
         .await
@@ -398,7 +399,7 @@ impl UserAssignRepository {
             Some(user_assign) => Ok(user_assign),
             None => Err(DBAccessError::NotFoundError(get_error_message(
                 ErrorKey::UserAssignGetByIdNotFound,
-                format!("ID = {:?}", user_assign.id),
+                format!("ID = {:?}", user_assign.user_assign_id),
             ))),
         }
     }
@@ -409,7 +410,7 @@ impl UserAssignRepository {
         let result = sqlx::query!(
             r#"
                 DELETE FROM user_assign
-                WHERE id = $1
+                WHERE user_assign_id = $1
             "#,
             id,
         )
@@ -442,9 +443,9 @@ pub async fn get_user_assign_by_id_with_transaction(
     let result = sqlx::query_as!(
         UserAssign,
         r#"
-            SELECT id, user_id, task_id
+            SELECT user_assign_id, user_id, task_id
             FROM user_assign
-            WHERE id = $1
+            WHERE user_assign_id = $1
         "#,
         id,
     )
@@ -474,7 +475,7 @@ pub async fn get_user_assign_by_user_id_with_transaction(
     let result = sqlx::query_as!(
         UserAssign,
         r#"
-            SELECT id, user_id, task_id
+            SELECT user_assign_id, user_id, task_id
             FROM user_assign
             WHERE user_id = $1
         "#,
@@ -500,7 +501,7 @@ pub async fn get_user_assign_by_task_id_with_transaction(
     let result = sqlx::query_as!(
         UserAssign,
         r#"
-            SELECT id, user_id, task_id
+            SELECT user_assign_id, user_id, task_id
             FROM user_assign
             WHERE task_id = $1
         "#,
@@ -527,7 +528,7 @@ pub async fn get_user_assign_by_user_id_and_task_id_with_transaction(
     let result = sqlx::query_as!(
         UserAssign,
         r#"
-            SELECT id, user_id, task_id
+            SELECT user_assign_id, user_id, task_id
             FROM user_assign
             WHERE user_id = $1 AND task_id = $2
         "#,
@@ -626,4 +627,74 @@ fn validate_filter(filter: &UserAssignFilter) -> Result<()> {
         validate_user_assign_task_id(filter.task_id.unwrap())?;
     }
     Ok(())
+}
+
+pub async fn get_related_task_ids_by_user_ids(
+    user_ids: Vec<i64>,
+    transaction: &mut Transaction<'_, Sqlite>,
+) -> Result<HashMap<i64, Vec<i64>>, DBAccessError> {
+    let mut placeholder = Vec::new();
+    for i in 1..user_ids.len() + 1 {
+        placeholder.push(format!("${}", i));
+    }
+
+    let query = match user_ids.len() {
+        0 => return Ok(HashMap::new()),
+        _ => format!(
+            r#"
+                SELECT user_assign_id, user_id, task_id FROM user_assign WHERE user_id IN ({})
+        "#,
+        placeholder.join(",")
+    )};
+    let mut query_builder = sqlx::query_as::<_, UserAssign>(&query);
+
+    for user_id in user_ids {
+        query_builder = query_builder.bind(user_id);
+    }
+
+    let result = query_builder.fetch_all(&mut **transaction)
+    .await
+    .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserAssignGetByUserIdFailed, e.to_string()))))?;
+
+    let mut task_ids_map: HashMap<i64, Vec<i64>> = HashMap::new();
+    for user_assign in result {
+        task_ids_map.entry(user_assign.user_id).or_insert(Vec::new()).push(user_assign.task_id);
+    }
+
+    Ok(task_ids_map)
+}
+
+pub async fn get_related_user_ids_by_task_ids(
+    task_ids: Vec<i64>,
+    transaction: &mut Transaction<'_, Sqlite>,
+) -> Result<HashMap<i64, Vec<i64>>, DBAccessError> {
+    let mut placeholder = Vec::new();
+    for i in 1..task_ids.len() + 1 {
+        placeholder.push(format!("${}", i));
+    }
+
+    let query = match task_ids.len() {
+        0 => return Ok(HashMap::new()),
+        _ => format!(
+        r#"
+            SELECT user_assign_id, task_id, user_id FROM user_assign WHERE task_id IN ({})
+        "#,
+        placeholder.join(",")
+    )};
+    let mut query_builder = sqlx::query_as::<_, UserAssign>(&query);
+
+    for task_id in task_ids {
+        query_builder = query_builder.bind(task_id);
+    }
+
+    let result = query_builder.fetch_all(&mut **transaction)
+    .await
+    .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserAssignGetByTaskIdFailed, e.to_string()))))?;
+
+    let mut user_ids_map: HashMap<i64, Vec<i64>> = HashMap::new();
+    for user_assign in result {
+        user_ids_map.entry(user_assign.task_id).or_insert(Vec::new()).push(user_assign.user_id);
+    }
+
+    Ok(user_ids_map)
 }

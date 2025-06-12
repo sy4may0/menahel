@@ -1,7 +1,7 @@
 use crate::enums::TaskLevel;
 use crate::enums::TaskStatus;
 use crate::models::{Task, task::TaskFilter};
-use crate::repository::task_repo::{TaskRepository, get_task_by_id_with_transaction};
+use crate::repository::task_repo::{TaskRepository, get_task_by_id_with_transaction, get_tasks_with_pagination_with_transaction};
 use chrono::Utc;
 use sqlx::sqlite::SqlitePool;
 
@@ -26,7 +26,7 @@ mod task_repo_test {
         let created_task = task_repo.create_task(task).await.unwrap();
 
         let retrieved_task = task_repo
-            .get_task_by_id(created_task.id.unwrap())
+            .get_task_by_id(created_task.task_id.unwrap())
             .await
             .unwrap();
 
@@ -59,7 +59,7 @@ mod task_repo_test {
             None,
         );
         let created_task = task_repo.create_task(task).await.unwrap();
-        assert_eq!(created_task.id, Some(18));
+        assert_eq!(created_task.task_id, Some(18));
         assert_eq!(created_task.project_id, 1);
         assert_eq!(created_task.parent_id, Some(1));
         assert_eq!(created_task.level, TaskLevel::Minor.to_int());
@@ -78,7 +78,7 @@ mod task_repo_test {
     async fn test_task_repo_get_task_by_id(pool: SqlitePool) {
         let task_repo = TaskRepository::new(pool);
         let task = task_repo.get_task_by_id(1).await.unwrap();
-        assert_eq!(task.id, Some(1));
+        assert_eq!(task.task_id, Some(1));
         assert_eq!(task.project_id, 1);
         assert!(task.parent_id.is_none());
         assert_eq!(task.level, TaskLevel::Major.to_int());
@@ -105,7 +105,7 @@ mod task_repo_test {
         let task_repo = TaskRepository::new(pool);
         let tasks = task_repo.get_all_tasks().await.unwrap();
         assert_eq!(tasks.len(), 17);
-        assert_eq!(tasks[15].id, Some(16));
+        assert_eq!(tasks[15].task_id, Some(16));
         assert_eq!(tasks[15].project_id, 2);
         assert_eq!(tasks[15].parent_id, Some(5));
         assert_eq!(tasks[15].level, TaskLevel::Trivial.to_int());
@@ -615,7 +615,7 @@ mod task_repo_test {
         let task_repo = TaskRepository::new(pool);
         let updated_task = task_repo.get_task_by_id(1).await.unwrap();
 
-        assert_eq!(updated_task.id, Some(1));
+        assert_eq!(updated_task.task_id, Some(1));
         assert_eq!(updated_task.project_id, 1);
         assert_eq!(updated_task.parent_id, None);
         assert_eq!(updated_task.level, TaskLevel::Major.to_int());
@@ -629,7 +629,7 @@ mod task_repo_test {
         assert!(updated_task.updated_at.is_none());
 
         let task = Task {
-            id: Some(1),
+            task_id: Some(1),
             project_id: 1,
             parent_id: None,
             level: TaskLevel::Major.to_int(),
@@ -641,7 +641,7 @@ mod task_repo_test {
             updated_at: None,
         };
         let updated_task = task_repo.update_task(task).await.unwrap();
-        assert_eq!(updated_task.id, Some(1));
+        assert_eq!(updated_task.task_id, Some(1));
         assert_eq!(updated_task.project_id, 1);
         assert_eq!(updated_task.parent_id, None);
         assert_eq!(updated_task.level, TaskLevel::Major.to_int());
@@ -659,7 +659,7 @@ mod task_repo_test {
     async fn test_task_repo_update_task_not_exists(pool: SqlitePool) {
         let task_repo = TaskRepository::new(pool);
         let task = Task {
-            id: Some(100),
+            task_id: Some(100),
             project_id: 1,
             parent_id: None,
             level: TaskLevel::Major.to_int(),
@@ -679,7 +679,7 @@ mod task_repo_test {
         let task_repo = TaskRepository::new(pool);
 
         let found_task = task_repo.get_task_by_id(17).await.unwrap();
-        assert_eq!(found_task.id, Some(17));
+        assert_eq!(found_task.task_id, Some(17));
 
         let result = task_repo.delete_task(17).await.unwrap();
         assert_eq!(result, ());
@@ -747,7 +747,7 @@ mod task_repo_test {
     async fn test_task_repo_update_task_with_invalid_project_id(pool: SqlitePool) {
         let task_repo = TaskRepository::new(pool);
         let task = Task {
-            id: Some(1),
+            task_id: Some(1),
             project_id: 999, // 存在しないプロジェクトID
             parent_id: None,
             level: TaskLevel::Major.to_int(),
@@ -766,7 +766,7 @@ mod task_repo_test {
     async fn test_task_repo_update_task_with_invalid_parent_level(pool: SqlitePool) {
         let task_repo = TaskRepository::new(pool);
         let task = Task {
-            id: Some(1),
+            task_id: Some(1),
             project_id: 1,
             parent_id: Some(1), // 親タスクのレベルが不正
             level: TaskLevel::Major.to_int(),
@@ -785,7 +785,7 @@ mod task_repo_test {
     async fn test_task_repo_update_task_with_nonexistent_parent(pool: SqlitePool) {
         let task_repo = TaskRepository::new(pool);
         let task = Task {
-            id: Some(1),
+            task_id: Some(1),
             project_id: 1,
             parent_id: Some(999), // 存在しない親タスクID
             level: TaskLevel::Minor.to_int(),
@@ -804,7 +804,7 @@ mod task_repo_test {
     async fn test_task_repo_update_task_with_self_as_parent(pool: SqlitePool) {
         let task_repo = TaskRepository::new(pool);
         let task = Task {
-            id: Some(1),
+            task_id: Some(1),
             project_id: 1,
             parent_id: Some(1), // 自身のIDを親タスクIDとして指定
             level: TaskLevel::Minor.to_int(),
@@ -1002,7 +1002,7 @@ mod task_repo_test {
         let task = get_task_by_id_with_transaction(1, &mut tx)
             .await
             .unwrap();
-        assert_eq!(task.id, Some(1));
+        assert_eq!(task.task_id, Some(1));
     }
 
     #[sqlx::test(fixtures("tasks"))]
@@ -1011,5 +1011,37 @@ mod task_repo_test {
 
         let result = get_task_by_id_with_transaction(100, &mut tx).await;
         assert!(result.is_err());
+    }
+
+    #[sqlx::test(fixtures("tasks"))]
+    async fn test_task_repo_get_tasks_by_filter_with_user_ids(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+        let filter = TaskFilter {
+            project_id: None,
+            parent_id: None,
+            level: None,
+            name: None,
+            description: None,
+            status: None,
+            deadline_from: None,
+            deadline_to: None,
+            created_at_from: None,
+            created_at_to: None,
+            updated_at_from: None,
+            updated_at_to: None,
+            assignee_id: None,
+        };
+        let user_ids = vec![1, 2];
+        let tasks = get_tasks_with_pagination_with_transaction(
+            &mut tx,
+            None,
+            None,
+            Some(&filter),
+            Some(&user_ids),
+        ).await.unwrap();
+
+        assert_eq!(tasks.len(), 2);
+        assert_eq!(tasks[0].task_id, Some(15));
+        assert_eq!(tasks[1].task_id, Some(16));
     }
 }

@@ -8,3 +8,5 @@ mod task_test;
 mod user_assign_test;
 #[cfg(test)]
 mod user_test;
+#[cfg(test)]
+mod task_user_test;

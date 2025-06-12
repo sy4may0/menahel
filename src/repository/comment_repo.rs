@@ -53,7 +53,7 @@ impl CommentRepository {
             r#"
                 INSERT INTO comments (user_id, task_id, content, created_at)
                 VALUES ($1, $2, $3, $4)
-                RETURNING id, user_id, task_id, content, created_at, updated_at
+                RETURNING comment_id, user_id, task_id, content, created_at, updated_at
             "#,
             comment.user_id,
             comment.task_id,
@@ -86,9 +86,9 @@ impl CommentRepository {
         sqlx::query_as!(
             Comment,
             r#"
-                SELECT id, user_id, task_id, content, created_at, updated_at
+                SELECT comment_id, user_id, task_id, content, created_at, updated_at
                 FROM comments
-                WHERE id = $1
+                WHERE comment_id = $1
             "#,
             id,
         )
@@ -109,7 +109,7 @@ impl CommentRepository {
         sqlx::query_as!(
             Comment,
             r#"
-                SELECT id, user_id, task_id, content, created_at, updated_at
+                SELECT comment_id, user_id, task_id, content, created_at, updated_at
                 FROM comments
                 WHERE task_id = $1
             "#,
@@ -132,7 +132,7 @@ impl CommentRepository {
         sqlx::query_as!(
             Comment,
             r#"
-                SELECT id, user_id, task_id, content, created_at, updated_at
+                SELECT comment_id, user_id, task_id, content, created_at, updated_at
                 FROM comments
                 WHERE user_id = $1
             "#,
@@ -164,14 +164,14 @@ impl CommentRepository {
             r#"
                 UPDATE comments
                 SET content = $1, user_id = $2, task_id = $3, updated_at = $4
-                WHERE id = $5
-                RETURNING id, user_id, task_id, content, created_at, updated_at
+                WHERE comment_id = $5
+                RETURNING comment_id, user_id, task_id, content, created_at, updated_at
             "#,
             comment.content,
             comment.user_id,
             comment.task_id,
             now,
-            comment.id,
+            comment.comment_id,
         )
         .fetch_one(&mut *tx)
         .await;
@@ -199,7 +199,7 @@ impl CommentRepository {
         let result = sqlx::query!(
             r#"
                 DELETE FROM comments
-                WHERE id = $1
+                WHERE comment_id = $1
             "#,
             id,
         )
@@ -230,9 +230,9 @@ pub async fn get_comment_by_id_with_transaction(
     sqlx::query_as!(
         Comment,
         r#"
-            SELECT id, user_id, task_id, content, created_at, updated_at
+            SELECT comment_id, user_id, task_id, content, created_at, updated_at
             FROM comments
-            WHERE id = $1
+            WHERE comment_id = $1
         "#,
         id,
     )

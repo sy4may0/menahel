@@ -130,7 +130,7 @@ mod user_assign_handler_test {
         assert_eq!(res.results.len(), 1);
         assert_eq!(res.count, 1);
         let user_assign = res.results.first().unwrap();
-        assert_eq!(user_assign.id, Some(0));
+        assert_eq!(user_assign.user_assign_id, Some(0));
     }
 
     #[actix_web::test]
@@ -318,7 +318,7 @@ mod user_assign_handler_test {
         ).await;
 
         let user_assign = UserAssign {
-            id: None,
+            user_assign_id: None,
             user_id: 5,
             task_id: 2,
         };
@@ -355,7 +355,7 @@ mod user_assign_handler_test {
         ).await;
 
         let user_assign = UserAssign {
-            id: None,
+            user_assign_id: None,
             user_id: 100,
             task_id: 2,
         };
@@ -375,7 +375,7 @@ mod user_assign_handler_test {
         ).await;
 
         let user_assign = UserAssign {
-            id: None,
+            user_assign_id: None,
             user_id: 5,
             task_id: 100,
         };
@@ -409,7 +409,7 @@ mod user_assign_handler_test {
         ).await;
 
         let user_assign = UserAssign {
-            id: None,
+            user_assign_id: None,
             user_id: 0,
             task_id: 2,
         };
@@ -430,7 +430,7 @@ mod user_assign_handler_test {
         ).await;
 
         let user_assign = UserAssign {
-            id: None,
+            user_assign_id: None,
             user_id: 5,
             task_id: 0,
         };
@@ -450,7 +450,7 @@ mod user_assign_handler_test {
         ).await;
 
         let user_assign = UserAssign {
-            id: None,
+            user_assign_id: None,
             user_id: 5,
             task_id: 1,
         };
@@ -471,7 +471,7 @@ mod user_assign_handler_test {
         ).await;
 
         let user_assign = UserAssign {
-            id: Some(0),
+            user_assign_id: Some(0),
             user_id: 5,
             task_id: 2,
         };
@@ -508,7 +508,7 @@ mod user_assign_handler_test {
         ).await;
 
         let user_assign = UserAssign {
-            id: Some(100),
+            user_assign_id: Some(100),
             user_id: 5,
             task_id: 2,
         };
@@ -528,7 +528,7 @@ mod user_assign_handler_test {
         ).await;
 
         let user_assign = UserAssign {
-            id: Some(0),
+            user_assign_id: Some(0),
             user_id: 5,
             task_id: 2,
         };

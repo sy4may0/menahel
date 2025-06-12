@@ -285,10 +285,10 @@ async fn update_user_assign(req: HttpRequest, user_assign_data: Result<web::Json
         }
     };
 
-    if user_assign_data.id.is_none() || (user_assign_data.id.is_some() && user_assign_data.id.unwrap() != path) {
+    if user_assign_data.user_assign_id.is_none() || (user_assign_data.user_assign_id.is_some() && user_assign_data.user_assign_id.unwrap() != path) {
         let error = HandlerError::BadRequest(
             get_error_message(ErrorKey::UserAssignHandlerPathAndBodyIdMismatch,
-            format!("path.id: {:?}, user_assign_data.id: {:?}", path, user_assign_data.id)
+            format!("path.id: {:?}, user_assign_data.id: {:?}", path, user_assign_data.user_assign_id)
         ));
         let response = ErrorResponse::new(error.to_string(), 1, None);
         return handle_error(error, response);

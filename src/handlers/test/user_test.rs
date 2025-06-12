@@ -63,14 +63,13 @@ mod user_handler_test {
         assert_eq!(pagination.current_page, 1);
         assert_eq!(pagination.page_size, 4);
 
-        assert_eq!(res.results[0].id, Some(0));
+        assert_eq!(res.results[0].user_id, Some(0));
         assert_eq!(res.results[0].username, "testuser0");
         assert_eq!(res.results[0].email, "test0@example.com");
-        assert_eq!(res.results[0].password_hash, "dummy_hash_0");
 
-        assert_eq!(res.results[1].id, Some(1));
-        assert_eq!(res.results[2].id, Some(2));
-        assert_eq!(res.results[3].id, Some(3));
+        assert_eq!(res.results[1].user_id, Some(1));
+        assert_eq!(res.results[2].user_id, Some(2));
+        assert_eq!(res.results[3].user_id, Some(3));
 
         let req = test::TestRequest::get().uri("/users?page=2&page_size=4").to_request();
         let res: UserResponse = test::call_and_read_body_json(&app, req).await;
@@ -82,10 +81,10 @@ mod user_handler_test {
         assert_eq!(pagination.current_page, 2);
         assert_eq!(pagination.page_size, 4);
 
-        assert_eq!(res.results[0].id, Some(4));
-        assert_eq!(res.results[1].id, Some(5));
-        assert_eq!(res.results[2].id, Some(6));
-        assert_eq!(res.results[3].id, Some(7));
+        assert_eq!(res.results[0].user_id, Some(4));
+        assert_eq!(res.results[1].user_id, Some(5));
+        assert_eq!(res.results[2].user_id, Some(6));
+        assert_eq!(res.results[3].user_id, Some(7));
 
         let req = test::TestRequest::get().uri("/users?page=3&page_size=4").to_request();
         let res: UserResponse = test::call_and_read_body_json(&app, req).await;
@@ -97,8 +96,8 @@ mod user_handler_test {
         assert_eq!(pagination.current_page, 3);
         assert_eq!(pagination.page_size, 4);
 
-        assert_eq!(res.results[0].id, Some(8));
-        assert_eq!(res.results[1].id, Some(9));
+        assert_eq!(res.results[0].user_id, Some(8));
+        assert_eq!(res.results[1].user_id, Some(9));
     }
 
     #[actix_web::test]
@@ -287,7 +286,7 @@ mod user_handler_test {
         let req = test::TestRequest::post()
             .uri("/users")
             .set_json(User {
-                id: None,
+                user_id: None,
                 username: "testuser10".to_string(),
                 email: "test10@example.com".to_string(),
                 password_hash: "dummy_hash_10".to_string(),
@@ -321,7 +320,7 @@ mod user_handler_test {
         let req = test::TestRequest::post()
             .uri("/users")
             .set_json(User {
-                id: None,
+                user_id: None,
                 username: "testuser11".to_string(),
                 email: "test11example.com".to_string(),
                 password_hash: "dummy_hash_11".to_string(),
@@ -344,7 +343,7 @@ mod user_handler_test {
         let req = test::TestRequest::post()
             .uri("/users")
             .set_json(User {
-                id: None,
+                user_id: None,
                 username: "testuser9".to_string(),
                 email: "test9@example.com".to_string(),
                 password_hash: "dummy_hash_9".to_string(),
@@ -384,7 +383,7 @@ mod user_handler_test {
         let req = test::TestRequest::post()
             .uri("/users")
             .set_json(User {
-                id: None,
+                user_id: None,
                 username: "".to_string(),
                 email: "".to_string(),
                 password_hash: "".to_string(),
@@ -407,7 +406,7 @@ mod user_handler_test {
         let req = test::TestRequest::post()
             .uri("/users")
             .set_json(User {
-                id: None,
+                user_id: None,
                 username: "testuser12".to_string(),
                 email: "test0@example.com".to_string(),
                 password_hash: "dummy_hash_12".to_string(),
@@ -430,7 +429,7 @@ mod user_handler_test {
         let req = test::TestRequest::post()
             .uri("/users/1")
             .set_json(User {
-                id: Some(1),
+                user_id: Some(1),
                 username: "testuser1_x".to_string(),
                 email: "test1_x@example.com".to_string(),
                 password_hash: "dummy_hash_1_x".to_string(),
@@ -464,7 +463,7 @@ mod user_handler_test {
         let req = test::TestRequest::post()
             .uri("/users/100")
             .set_json(User {
-                id: Some(100),
+                user_id: Some(100),
                 username: "testuser100".to_string(),
                 email: "test100@example.com".to_string(),
                 password_hash: "dummy_hash_100".to_string(),
@@ -487,7 +486,7 @@ mod user_handler_test {
         let req = test::TestRequest::post()
             .uri("/users/1")
             .set_json(User {
-                id: Some(1),
+                user_id: Some(1),
                 username: "testuser1_x".to_string(),
                 email: "test1_xexample.com".to_string(),
                 password_hash: "dummy_hash_1_x".to_string(),
@@ -510,7 +509,7 @@ mod user_handler_test {
         let req = test::TestRequest::post()
             .uri("/users/1")
             .set_json(User {
-                id: Some(2),
+                user_id: Some(2),
                 username: "testuser1_x".to_string(),
                 email: "test1_x@example.com".to_string(),
                 password_hash: "dummy_hash_1_x".to_string(),
@@ -551,7 +550,7 @@ mod user_handler_test {
         let req = test::TestRequest::post()
             .uri("/users/1")
             .set_json(User {
-                id: Some(1),
+                user_id: Some(1),
                 username: "".to_string(),
                 email: "".to_string(),
                 password_hash: "".to_string(),
@@ -574,7 +573,7 @@ mod user_handler_test {
         let req = test::TestRequest::post()
             .uri("/users/2")
             .set_json(User {
-                id: Some(2),
+                user_id: Some(2),
                 username: "testuser0".to_string(),
                 email: "test_xxx@example.com".to_string(),
                 password_hash: "dummy_hash_1_x".to_string(),
@@ -597,7 +596,7 @@ mod user_handler_test {
         let req = test::TestRequest::post()
             .uri("/users/2")
             .set_json(User {
-                id: Some(2),
+                user_id: Some(2),
                 username: "testuser1_x".to_string(),
                 email: "test0@example.com".to_string(),
                 password_hash: "dummy_hash_1_x".to_string(),
@@ -618,7 +617,7 @@ mod user_handler_test {
         ).await;
 
         let req = test::TestRequest::post().set_json(User {
-            id: Some(1),
+            user_id: Some(1),
             username: "testuser1_x".to_string(),
             email: "test1_x@example.com".to_string(),
             password_hash: "dummy_hash_1_x".to_string(),

@@ -2,6 +2,7 @@ use crate::models::{UserAssign, UserAssignFilter};
 use crate::repository::user_assign_repo::{
     UserAssignRepository, get_user_assign_by_id_with_transaction,
     get_user_assign_by_task_id_with_transaction, get_user_assign_by_user_id_with_transaction,
+    get_related_task_ids_by_user_ids, get_related_user_ids_by_task_ids,
 };
 use sqlx::sqlite::SqlitePool;
 
@@ -14,7 +15,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: None,
+            user_assign_id: None,
             user_id: 1,
             task_id: 13,
         };
@@ -25,7 +26,7 @@ mod user_assign_repo_test {
             .unwrap();
         assert_eq!(created_user_assign.user_id, 1);
         let retrieved_user_assign = user_assign_repo
-            .get_user_assign_by_id(created_user_assign.id.unwrap())
+            .get_user_assign_by_id(created_user_assign.user_assign_id.unwrap())
             .await
             .unwrap();
         assert_eq!(retrieved_user_assign.user_id, 1);
@@ -37,7 +38,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: None,
+            user_assign_id: None,
             user_id: 0,
             task_id: 13,
         };
@@ -51,7 +52,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: None,
+            user_assign_id: None,
             user_id: 1,
             task_id: 0,
         };
@@ -65,7 +66,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: None,
+            user_assign_id: None,
             user_id: 100,
             task_id: 13,
         };
@@ -79,7 +80,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: None,
+            user_assign_id: None,
             user_id: 1,
             task_id: 100,
         };
@@ -93,7 +94,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: None,
+            user_assign_id: None,
             user_id: 2,
             task_id: 1,
         };
@@ -107,7 +108,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: None,
+            user_assign_id: None,
             user_id: 1,
             task_id: 11,
         };
@@ -275,7 +276,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: Some(1),
+            user_assign_id: Some(1),
             user_id: 2,
             task_id: 11,
         };
@@ -293,7 +294,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: Some(100),
+            user_assign_id: Some(100),
             user_id: 2,
             task_id: 11,
         };
@@ -307,7 +308,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: Some(1),
+            user_assign_id: Some(1),
             user_id: 0, // 無効なuser_id
             task_id: 11,
         };
@@ -321,7 +322,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: Some(1),
+            user_assign_id: Some(1),
             user_id: 1,
             task_id: 0, // 無効なtask_id
         };
@@ -335,7 +336,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: Some(1),
+            user_assign_id: Some(1),
             user_id: 100, // 存在しないuser_id
             task_id: 11,
         };
@@ -349,7 +350,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: Some(1),
+            user_assign_id: Some(1),
             user_id: 1,
             task_id: 100, // 存在しないtask_id
         };
@@ -363,7 +364,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: Some(1),
+            user_assign_id: Some(1),
             user_id: 2,
             task_id: 1, // 最大レベルでないタスク
         };
@@ -377,7 +378,7 @@ mod user_assign_repo_test {
         let user_assign_repo = UserAssignRepository::new(pool);
 
         let user_assign = UserAssign {
-            id: Some(1),
+            user_assign_id: Some(1),
             user_id: 2, // 既に同じタスクにアサインされているユーザー
             task_id: 3,
         };
@@ -507,5 +508,69 @@ mod user_assign_repo_test {
 
         let user_assigns = user_assign_repo.get_user_assigns_with_pagination(&1, &1000).await;
         assert!(user_assigns.is_err());
+    }
+
+    #[sqlx::test(fixtures("user_assign"))]
+    async fn test_user_assign_repo_get_related_task_ids_by_user_ids(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let task_ids = get_related_task_ids_by_user_ids(vec![1, 2], &mut tx)
+            .await
+            .unwrap();
+        assert_eq!(task_ids.len(), 2);
+        assert_eq!(task_ids[&1], vec![3, 11]);
+        assert_eq!(task_ids[&2], vec![3, 12]);
+    }
+
+    #[sqlx::test(fixtures("user_assign"))]
+    async fn test_user_assign_repo_get_related_user_ids_by_task_ids(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let user_ids = get_related_user_ids_by_task_ids(vec![3, 11], &mut tx)
+            .await
+            .unwrap();
+        assert_eq!(user_ids.len(), 2);
+        assert_eq!(user_ids[&3], vec![1, 2]);
+        assert_eq!(user_ids[&11], vec![1]);
+    }
+
+    #[sqlx::test(fixtures("user_assign"))]
+    async fn test_user_assign_repo_get_related_user_ids_by_task_ids_not_found(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let user_ids = get_related_user_ids_by_task_ids(vec![100], &mut tx)
+            .await
+            .unwrap();
+        assert_eq!(user_ids.len(), 0);
+    }
+
+    #[sqlx::test(fixtures("user_assign"))]
+    async fn test_user_assign_repo_get_related_task_ids_by_user_ids_not_found(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let task_ids = get_related_task_ids_by_user_ids(vec![100], &mut tx)
+            .await
+            .unwrap();
+        assert_eq!(task_ids.len(), 0);
+    }
+
+    #[sqlx::test(fixtures("user_assign"))]
+    async fn test_user_assign_repo_get_related_task_ids_by_user_ids_empty(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let task_ids = get_related_task_ids_by_user_ids(vec![], &mut tx)
+            .await
+            .unwrap();
+        assert_eq!(task_ids.len(), 0);
+    }
+
+    #[sqlx::test(fixtures("user_assign"))]
+    async fn test_user_assign_repo_get_related_user_ids_by_task_ids_empty(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+
+        let user_ids = get_related_user_ids_by_task_ids(vec![], &mut tx)
+            .await
+            .unwrap();
+        assert_eq!(user_ids.len(), 0);
     }
 }

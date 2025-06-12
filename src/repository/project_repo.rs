@@ -15,14 +15,14 @@ impl ProjectRepository {
     }
 
     pub async fn create_project(&self, project: Project) -> Result<Project, DBAccessError> {
-        validate_project_id(project.id)?;
+        validate_project_id(project.project_id)?;
         validate_project_name(&project.name)?;
         let result = sqlx::query_as!(
             Project,
             r#"
                 INSERT INTO projects (name)
                 VALUES ($1)
-                RETURNING id, name
+                RETURNING project_id, name
             "#,
             project.name,
         )
@@ -44,9 +44,9 @@ impl ProjectRepository {
         let result = sqlx::query_as!(
             Project,
             r#"
-                SELECT id, name
+                SELECT project_id, name
                 FROM projects
-                WHERE id = $1
+                WHERE project_id = $1
             "#,
             id,
         )
@@ -74,7 +74,7 @@ impl ProjectRepository {
         let result = sqlx::query_as!(
             Project,
             r#"
-                SELECT id, name
+                SELECT project_id, name
                 FROM projects
                 WHERE name = $1
             "#,
@@ -104,7 +104,7 @@ impl ProjectRepository {
         let result = sqlx::query_as!(
             Project,
             r#"
-                SELECT id, name
+                SELECT project_id, name
                 FROM projects
             "#,
         )
@@ -172,9 +172,9 @@ impl ProjectRepository {
         let result = sqlx::query_as!(
             Project,
             r#"
-                SELECT id, name
+                SELECT project_id, name
                 FROM projects
-                ORDER BY id
+                ORDER BY project_id
                 LIMIT $1 OFFSET $2
             "#,
             limit,
@@ -213,7 +213,7 @@ impl ProjectRepository {
     }
 
     pub async fn update_project(&self, project: Project) -> Result<Project, DBAccessError> {
-        validate_project_id(project.id)?;
+        validate_project_id(project.project_id)?;
         validate_project_name(&project.name)?;
 
         let result = sqlx::query_as!(
@@ -221,11 +221,11 @@ impl ProjectRepository {
             r#"
                 UPDATE projects
                 SET name = $1
-                WHERE id = $2
-                RETURNING id, name
+                WHERE project_id = $2
+                RETURNING project_id, name
             "#,
             project.name,
-            project.id,
+            project.project_id,
         )
         .fetch_optional(&self.pool)
         .await
@@ -242,7 +242,7 @@ impl ProjectRepository {
             Some(project) => Ok(project),
             None => Err(DBAccessError::NotFoundError(
                 get_error_message(ErrorKey::ProjectUpdateFailed,
-                format!("ID = {:?}", project.id)
+                format!("ID = {:?}", project.project_id)
             )))
         }
     }
@@ -253,7 +253,7 @@ impl ProjectRepository {
         let result = sqlx::query!(
             r#"
                 DELETE FROM projects
-                WHERE id = $1
+                WHERE project_id = $1
             "#,
             id,
         )
@@ -286,9 +286,9 @@ pub async fn get_project_by_id_with_transaction(
     sqlx::query_as!(
         Project,
         r#"
-            SELECT id, name
+            SELECT project_id, name
             FROM projects
-            WHERE id = $1
+            WHERE project_id = $1
         "#,
         id,
     )

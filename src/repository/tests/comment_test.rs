@@ -159,7 +159,7 @@ mod comment_repo_test {
         let comment_repo = CommentRepository::new(pool);
 
         let comment = Comment {
-            id: Some(1),
+            comment_id: Some(1),
             user_id: 2,
             task_id: 3,
             content: "Test Comment 0 updated".to_string(),
@@ -188,7 +188,7 @@ mod comment_repo_test {
         let comment_repo = CommentRepository::new(pool);
 
         let comment = Comment {
-            id: Some(1),
+            comment_id: Some(1),
             user_id: 0,
             task_id: 3,
             content: "Test Comment 0 updated".to_string(),
@@ -205,7 +205,7 @@ mod comment_repo_test {
         let comment_repo = CommentRepository::new(pool);
 
         let comment = Comment {
-            id: Some(1),
+            comment_id: Some(1),
             user_id: 1,
             task_id: 0,
             content: "Test Comment 0 updated".to_string(),
@@ -222,7 +222,7 @@ mod comment_repo_test {
         let comment_repo = CommentRepository::new(pool);
 
         let comment = Comment {
-            id: Some(1),
+            comment_id: Some(1),
             user_id: 1,
             task_id: 3,
             content: "".to_string(),
@@ -239,7 +239,7 @@ mod comment_repo_test {
         let comment_repo = CommentRepository::new(pool);
 
         let comment = Comment {
-            id: Some(1),
+            comment_id: Some(1),
             user_id: 1,
             task_id: 3,
             content: "a".repeat(2025),
@@ -256,7 +256,7 @@ mod comment_repo_test {
         let comment_repo = CommentRepository::new(pool);
 
         let comment = Comment {
-            id: Some(1),
+            comment_id: Some(1),
             user_id: 100,
             task_id: 3,
             content: "Test Comment 0 updated".to_string(),
@@ -273,7 +273,7 @@ mod comment_repo_test {
         let comment_repo = CommentRepository::new(pool);
 
         let comment = Comment {
-            id: Some(1),
+            comment_id: Some(1),
             user_id: 1,
             task_id: 100,
             content: "Test Comment 0 updated".to_string(),
@@ -290,7 +290,7 @@ mod comment_repo_test {
         let comment_repo = CommentRepository::new(pool);
 
         let comment = Comment {
-            id: Some(1),
+            comment_id: Some(1),
             user_id: 1,
             task_id: 1,
             content: "Test Comment 0 updated".to_string(),

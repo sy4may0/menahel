@@ -314,7 +314,7 @@ mod task_handler_test {
         ).await;
 
         let task = Task {
-            id: None,
+            task_id: None,
             project_id: 0,
             parent_id: None,
             level: 0,
@@ -355,7 +355,7 @@ mod task_handler_test {
         ).await;
 
         let task = Task {
-            id: None,
+            task_id: None,
             project_id: 0,
             parent_id: Some(1),
             level: 2,
@@ -402,7 +402,7 @@ mod task_handler_test {
         ).await;
 
         let task = Task {
-            id: None,
+            task_id: None,
             project_id: -1,
             parent_id: None,
             level: 0,
@@ -430,7 +430,7 @@ mod task_handler_test {
         ).await;
 
         let task = Task {
-            id: None,
+            task_id: None,
             project_id: 100,
             parent_id: None,
             level: 0,
@@ -458,7 +458,7 @@ mod task_handler_test {
         ).await;
 
         let task = Task {
-            id: None,
+            task_id: None,
             project_id: 0,
             parent_id: Some(2),
             level: 1,
@@ -486,7 +486,7 @@ mod task_handler_test {
         ).await;
 
         let task = Task {
-            id: None,
+            task_id: None,
             project_id: 0,
             parent_id: Some(100),
             level: 1,
@@ -514,7 +514,7 @@ mod task_handler_test {
         ).await;
 
         let task = Task {
-            id: Some(0),
+            task_id: Some(0),
             project_id: 0,
             parent_id: None,
             level: 0,
@@ -571,7 +571,7 @@ mod task_handler_test {
         ).await;
 
         let task = Task {
-            id: Some(100),
+            task_id: Some(100),
             project_id: 0,
             parent_id: None,
             level: 0,
@@ -599,7 +599,7 @@ mod task_handler_test {
         ).await;
 
         let task = Task {
-            id: Some(0),
+            task_id: Some(0),
             project_id: -1,
             parent_id: None,
             level: 0,
@@ -628,7 +628,7 @@ mod task_handler_test {
         ).await;
 
         let task = Task {
-            id: Some(2),
+            task_id: Some(2),
             project_id: 0,
             parent_id: Some(100),
             level: 2,
@@ -656,7 +656,7 @@ mod task_handler_test {
         ).await;
 
         let task = Task {
-            id: Some(2),
+            task_id: Some(2),
             project_id: 0,
             parent_id: Some(1),
             level: 1,
@@ -684,7 +684,7 @@ mod task_handler_test {
         ).await;
 
         let task = Task {
-            id: Some(0),
+            task_id: Some(0),
             project_id: 0,
             parent_id: None,
             level: 0,
@@ -712,7 +712,7 @@ mod task_handler_test {
         ).await;
 
         let task = Task {
-            id: Some(0),
+            task_id: Some(0),
             project_id: 0,
             parent_id: None,
             level: 0,

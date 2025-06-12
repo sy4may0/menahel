@@ -16,16 +16,16 @@ mod project_repo_test {
         let project_name = format!("create_test_{}", now);
 
         let project = Project {
-            id: None,
+            project_id: None,
             name: project_name.clone(),
         };
 
         let created_project = project_repo.create_project(project).await.unwrap();
         assert_eq!(created_project.name, project_name);
-        assert!(created_project.id.is_some());
+        assert!(created_project.project_id.is_some());
 
         let retrieved_project = project_repo
-            .get_project_by_id(created_project.id.unwrap())
+            .get_project_by_id(created_project.project_id.unwrap())
             .await
             .unwrap();
         assert_eq!(retrieved_project.name, project_name);
@@ -38,13 +38,13 @@ mod project_repo_test {
         let project_name = format!("get_by_id_test_{}", now);
 
         let project = Project {
-            id: None,
+            project_id: None,
             name: project_name.clone(),
         };
 
         let created_project = project_repo.create_project(project).await.unwrap();
         let retrieved_project = project_repo
-            .get_project_by_id(created_project.id.unwrap())
+            .get_project_by_id(created_project.project_id.unwrap())
             .await
             .unwrap();
         assert_eq!(retrieved_project.name, project_name);
@@ -57,7 +57,7 @@ mod project_repo_test {
         let project_name = format!("get_by_name_test_{}", now);
 
         let project = Project {
-            id: None,
+            project_id: None,
             name: project_name.clone(),
         };
 
@@ -77,7 +77,7 @@ mod project_repo_test {
         let project_count = 5;
         let projects = (1..=project_count)
             .map(|i| Project {
-                id: None,
+                project_id: None,
                 name: format!("get_all_projects_test_{}_{}", now, i),
             })
             .collect::<Vec<Project>>();
@@ -93,7 +93,7 @@ mod project_repo_test {
 
         for (i, project) in retrieved_projects.iter().enumerate() {
             assert_eq!(project.name, created_projects[i].name);
-            assert_eq!(project.id, created_projects[i].id);
+            assert_eq!(project.project_id, created_projects[i].project_id);
         }
     }
 
@@ -111,25 +111,25 @@ mod project_repo_test {
         let project_name = format!("update_test_{}", now);
 
         let project = Project {
-            id: None,
+            project_id: None,
             name: project_name.clone(),
         };
 
         let created_project = project_repo.create_project(project).await.unwrap();
 
         let updated_project = Project {
-            id: created_project.id,
+            project_id: created_project.project_id,
             name: project_name.clone() + "_updated",
         };
 
         project_repo.update_project(updated_project).await.unwrap();
 
         let retrieved_project = project_repo
-            .get_project_by_id(created_project.id.unwrap())
+            .get_project_by_id(created_project.project_id.unwrap())
             .await
             .unwrap();
         assert_eq!(retrieved_project.name, project_name + "_updated");
-        assert_eq!(retrieved_project.id, created_project.id);
+        assert_eq!(retrieved_project.project_id, created_project.project_id);
     }
 
     #[sqlx::test]
@@ -139,22 +139,22 @@ mod project_repo_test {
         let project_name = format!("delete_test_{}", now);
 
         let project = Project {
-            id: None,
+            project_id: None,
             name: project_name.clone(),
         };
 
         let created_project = project_repo.create_project(project).await.unwrap();
         let retrieved_project = project_repo
-            .get_project_by_id(created_project.id.unwrap())
+            .get_project_by_id(created_project.project_id.unwrap())
             .await;
         assert!(retrieved_project.is_ok());
 
         project_repo
-            .delete_project(created_project.id.unwrap())
+            .delete_project(created_project.project_id.unwrap())
             .await
             .unwrap();
         let retrieved_project = project_repo
-            .get_project_by_id(created_project.id.unwrap())
+            .get_project_by_id(created_project.project_id.unwrap())
             .await;
         assert!(retrieved_project.is_err());
     }
@@ -166,12 +166,12 @@ mod project_repo_test {
         let project_name = format!("duplicate_test_1_{}", now);
 
         let project1 = Project {
-            id: None,
+            project_id: None,
             name: project_name.clone(),
         };
 
         let project2 = Project {
-            id: None,
+            project_id: None,
             name: project_name.clone(),
         };
 
@@ -187,7 +187,7 @@ mod project_repo_test {
         let project_name = format!("nonexistent_test_{}", now);
 
         let project = Project {
-            id: Some(114514),
+            project_id: Some(114514),
             name: project_name,
         };
 
@@ -207,7 +207,7 @@ mod project_repo_test {
         let project_repo = ProjectRepository::new(pool);
 
         let project = Project {
-            id: None,
+            project_id: None,
             name: "".to_string(),
         };
 
@@ -220,7 +220,7 @@ mod project_repo_test {
         let project_repo = ProjectRepository::new(pool);
 
         let project = Project {
-            id: None,
+            project_id: None,
             name: "a".repeat(129),
         };
 
@@ -235,14 +235,14 @@ mod project_repo_test {
         let project_name = format!("empty_name_test_{}", now);
 
         let project = Project {
-            id: None,
+            project_id: None,
             name: project_name.clone(),
         };
 
         let result = project_repo.create_project(project).await.unwrap();
 
         let updated_project = Project {
-            id: result.id,
+            project_id: result.project_id,
             name: "".to_string(),
         };
 
@@ -257,14 +257,14 @@ mod project_repo_test {
         let project_name = format!("long_name_test_{}", now);
 
         let project = Project {
-            id: None,
+            project_id: None,
             name: project_name.clone(),
         };
 
         let result = project_repo.create_project(project).await.unwrap();
 
         let updated_project = Project {
-            id: result.id,
+            project_id: result.project_id,
             name: "a".repeat(129),
         };
 
@@ -279,7 +279,7 @@ mod project_repo_test {
         let project_name = format!("invalid_id_test_{}", now);
 
         let project = Project {
-            id: Some(-1),
+            project_id: Some(-1),
             name: project_name,
         };
 
@@ -294,7 +294,7 @@ mod project_repo_test {
         let project_name = format!("invalid_id_test_{}", now);
 
         let project = Project {
-            id: Some(0),
+            project_id: Some(0),
             name: project_name,
         };
 

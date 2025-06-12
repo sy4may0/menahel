@@ -10,6 +10,7 @@ use crate::errors::message_def::user_handler::add_user_handler_error_messages;
 use crate::errors::message_def::project_handler::add_project_handler_error_messages;
 use crate::errors::message_def::task_handler::add_task_handler_error_messages;
 use crate::errors::message_def::user_assign_handler::add_user_assign_handler_error_messages;
+use crate::errors::message_def::task_user::add_task_user_error_messages;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ErrorKey {
@@ -122,6 +123,11 @@ pub enum ErrorKey {
     CommentGetByIdNotFound,
     CommentGetPaginationNotFound,
     CommentGetCountFailed,
+
+    // タスク+ユーザー関連のエラー
+    TaskUserGetAllFailed,
+    TaskUserGetByFilterFailed,
+    TaskUserGetPaginationNotFound,
 
     // リポジトリ共通エラー
     NoPageSpecified,
@@ -307,6 +313,11 @@ impl fmt::Display for ErrorKey {
             ErrorKey::InvalidPagination => write!(f, "InvalidPagination"),
             ErrorKey::PageSizeTooLarge => write!(f, "PageSizeTooLarge"),
 
+            // タスク+ユーザー関連のエラー
+            ErrorKey::TaskUserGetAllFailed => write!(f, "TaskUserGetAllFailed"),
+            ErrorKey::TaskUserGetByFilterFailed => write!(f, "TaskUserGetByFilterFailed"),
+            ErrorKey::TaskUserGetPaginationNotFound => write!(f, "TaskUserGetPaginationNotFound"),
+
             // ユーザーハンドラ関連のエラー
             ErrorKey::UserHandlerGetUsersInvalidPage => write!(f, "UserHandlerGetUsersInvalidPage"),
             ErrorKey::UserHandlerGetUsersInvalidTarget => write!(f, "UserHandlerGetUsersInvalidTarget"),
@@ -368,6 +379,7 @@ static ERROR_MESSAGES: Lazy<HashMap<ErrorKey, HashMap<&'static str, &'static str
         add_project_handler_error_messages(&mut map);
         add_task_handler_error_messages(&mut map);
         add_user_assign_handler_error_messages(&mut map);
+        add_task_user_error_messages(&mut map);
 
         map
     });

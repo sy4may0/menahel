@@ -313,10 +313,10 @@ pub async fn update_task(
         }
     };
 
-    if task_data.id.is_none() || (task_data.id.is_some() && task_data.id.unwrap() != path) {
+    if task_data.task_id.is_none() || (task_data.task_id.is_some() && task_data.task_id.unwrap() != path) {
         let e = HandlerError::BadRequest(
             get_error_message(ErrorKey::TaskHandlerPathAndBodyIdMismatch,
-            format!("path.id: {:?}, task_data.id: {:?}", path, task_data.id)
+            format!("path.id: {:?}, task_data.id: {:?}", path, task_data.task_id)
         ));
         let response = ErrorResponse::new(e.to_string(), 1, Some(metadata));
         return handle_error(e, response);

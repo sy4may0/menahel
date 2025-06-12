@@ -235,7 +235,7 @@ mod project_handler_test {
 
         let req = test::TestRequest::post().uri("/projects")
         .set_json(Project {
-            id: None,
+            project_id: None,
             name: "TestProject10".to_string(),
         })
         .to_request();
@@ -267,7 +267,7 @@ mod project_handler_test {
 
         let req = test::TestRequest::post().uri("/projects")
         .set_json(Project {
-            id: None,
+            project_id: None,
             name: "".to_string(),
         })
         .to_request();
@@ -287,7 +287,7 @@ mod project_handler_test {
 
         let req = test::TestRequest::post().uri("/projects")
         .set_json(Project {
-            id: None,
+            project_id: None,
             name: "TestProject0".to_string(),
         })
         .to_request();
@@ -322,7 +322,7 @@ mod project_handler_test {
 
         let req = test::TestRequest::post().uri("/projects/0")
         .set_json(Project {
-            id: Some(0),
+            project_id: Some(0),
             name: "TestProject11".to_string(),
         })
         .to_request();
@@ -353,7 +353,7 @@ mod project_handler_test {
 
         let req = test::TestRequest::post().uri("/projects/0")
         .set_json(Project {
-            id: Some(0),
+            project_id: Some(0),
             name: "a".repeat(129),
         })
         .to_request();
@@ -373,7 +373,7 @@ mod project_handler_test {
         
         let req = test::TestRequest::post().uri("/projects/0")
         .set_json(Project {
-            id: Some(1),
+            project_id: Some(1),
             name: "TestProject11".to_string(),
         })
         .to_request();
@@ -393,7 +393,7 @@ mod project_handler_test {
 
         let req = test::TestRequest::post().uri("/projects/100")
         .set_json(Project {
-            id: Some(100),
+            project_id: Some(100),
             name: "TestProject11".to_string(),
         })
         .to_request();
@@ -414,7 +414,7 @@ mod project_handler_test {
 
         let req = test::TestRequest::post().uri("/projects/0")
         .set_json(Project {
-            id: Some(0),
+            project_id: Some(0),
             name: "TestProject5".to_string(),
         })
         .to_request();

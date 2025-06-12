@@ -11,7 +11,7 @@ use crate::models::PaginationParams;
 use crate::repository::user_repo::*;
 use crate::errors::handler_errors::HandlerError;
 use crate::errors::messages::{get_error_message, ErrorKey};
-use crate::models::User;
+use crate::models::{User, UserNoPassword};
 use crate::handlers::utils::handle_error;
 use sqlx::sqlite::SqlitePool;
 
@@ -88,7 +88,7 @@ impl GetUsersQuery {
 async fn get_users_with_pagination(
     pagination_params: &PaginationParams,
     pool: SqlitePool
-) -> Result<Vec<User>, HandlerError> {
+) -> Result<Vec<UserNoPassword>, HandlerError> {
     let user_repo = UserRepository::new(pool.clone());
 
     match pagination_params.status() {
@@ -265,7 +265,7 @@ pub async fn create_user(req: HttpRequest, user_data: Result<web::Json<User>, ac
 
     let hashed_password = hash_password(&user_data.password_hash);
     let insert_user = User {
-        id: None,
+        user_id: None,
         username: user_data.username.clone(),
         email: user_data.email.clone(),
         password_hash: hashed_password,
@@ -325,10 +325,10 @@ pub async fn update_user(
 
     let path_id = path;
 
-    if user_data.id.is_none() || (user_data.id.is_some() && user_data.id.unwrap() != path_id) {
+    if user_data.user_id.is_none() || (user_data.user_id.is_some() && user_data.user_id.unwrap() != path_id) {
         let e = HandlerError::BadRequest(
             get_error_message(ErrorKey::UserHandlerPathAndBodyIdMismatch,
-            format!("path.id: {:?}, user_data.id: {:?}", path_id, user_data.id)
+            format!("path.id: {:?}, user_data.id: {:?}", path_id, user_data.user_id)
         ));
         let response = ErrorResponse::new(e.to_string(), 1, Some(metadata));
         return handle_error(e, response);
@@ -336,7 +336,7 @@ pub async fn update_user(
 
     let hashed_password = hash_password(&user_data.password_hash);
     let update_user = User {
-        id: Some(path_id),
+        user_id: Some(path_id),
         username: user_data.username.clone(),
         email: user_data.email.clone(),
         password_hash: hashed_password,

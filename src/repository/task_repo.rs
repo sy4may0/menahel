@@ -19,6 +19,16 @@ enum FilterValue {
     String(String),
 }
 
+fn deduplicate(tasks: Vec<Task>) -> Vec<Task> {
+    let mut deduplicated_tasks: Vec<Task> = Vec::new();
+    for task in tasks {
+        if !deduplicated_tasks.iter().any(|t| t.task_id == task.task_id) {
+            deduplicated_tasks.push(task);
+        }
+    }
+    deduplicated_tasks
+}
+
 impl TaskRepository {
     pub fn new(pool: Pool<Sqlite>) -> Self {
         Self { pool }
@@ -75,7 +85,7 @@ impl TaskRepository {
     }
 
     pub async fn create_task(&self, task: Task) -> Result<Task, DBAccessError> {
-        validate_task_id(task.id)?;
+        validate_task_id(task.task_id)?;
         validate_task_project_id(task.project_id)?;
         validate_task_parent_id(task.parent_id)?;
         validate_task_level(task.level)?;
@@ -88,7 +98,7 @@ impl TaskRepository {
 
         self.validate_project_id_is_exist(task.project_id, &mut tx)
             .await?;
-        self.validate_parent_relation(task.parent_id, task.level, task.id, &mut tx)
+        self.validate_parent_relation(task.parent_id, task.level, task.task_id, &mut tx)
             .await?;
 
         let now = Utc::now().timestamp();
@@ -97,7 +107,7 @@ impl TaskRepository {
             r#"
                 INSERT INTO tasks (project_id, parent_id, level, name, description, status, deadline, created_at, updated_at)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                RETURNING id, project_id, parent_id, level, name, description, status, deadline, created_at, updated_at
+                RETURNING task_id, project_id, parent_id, level, name, description, status, deadline, created_at, updated_at
             "#,
             task.project_id,
             task.parent_id,
@@ -138,9 +148,9 @@ impl TaskRepository {
         let result = sqlx::query_as!(
             Task,
             r#"
-                SELECT id, project_id, parent_id, level, name, description, status, deadline, created_at, updated_at
+                SELECT task_id, project_id, parent_id, level, name, description, status, deadline, created_at, updated_at
                 FROM tasks
-                WHERE id = $1
+                WHERE task_id = $1
             "#,
             id,
         )
@@ -163,7 +173,7 @@ impl TaskRepository {
         let result = sqlx::query_as!(
             Task,
             r#"
-                SELECT id, project_id, parent_id, level, name, description, status, deadline, created_at, updated_at
+                SELECT task_id, project_id, parent_id, level, name, description, status, deadline, created_at, updated_at
                 FROM tasks
             "#,
         )
@@ -195,16 +205,6 @@ impl TaskRepository {
         page: Option<&i32>,
         page_size: Option<&i32>
     ) -> Result<Vec<Task>, DBAccessError> {
-        validate_pagination(page, page_size)?;
-
-        let mut query= String::from(r#"
-            SELECT 
-                tasks.id, tasks.project_id, tasks.parent_id, tasks.level, tasks.name, 
-                tasks.description, tasks.status, tasks.deadline, tasks.created_at, tasks.updated_at
-            FROM tasks
-        "#);
-        let mut page_bind_values: Vec<i32> = Vec::new();
-        let mut filter_bind_values: Vec<FilterValue> = Vec::new();
 
         let mut tx = self.pool.begin().await.map_err(|e| {
             DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
@@ -213,68 +213,13 @@ impl TaskRepository {
             )))
         })?;
 
-        // クエリのバインド値のインデックス
-        let mut index = 1;
-
-        // フィルターがある場合
-        if filter.is_some() {
-            if validate_filter(filter.as_ref().unwrap()).is_err() {
-                return Ok(Vec::new());
-            }
-            let (where_clause, bind_values) = build_where_clause(filter.as_ref().unwrap());
-            query.push_str(&format!(" {}", where_clause));
-
-            // クエリのバインド値のインデックスを更新
-            index = bind_values.len() + 1;
-            filter_bind_values = bind_values;
-        }
-
-        // ページングがある場合
-        if page.is_some() && page_size.is_some() {
-            let page = page.unwrap();
-            let page_size = page_size.unwrap();
-            let offset = (*page - 1) * *page_size;
-            let limit = *page_size;
-
-            let count = get_tasks_count_with_transaction(&mut tx, filter).await?;
-
-            if offset as i64 > count {
-                return Err(DBAccessError::NotFoundError(get_error_message(
-                    ErrorKey::TaskGetPaginationNotFound,
-                    format!("Offset = {}, Count = {}", offset, count),
-                )));
-            }
-            query.push_str(&format!(" LIMIT ${} OFFSET ${}", index, index + 1));
-            page_bind_values.push(limit as i32);
-            page_bind_values.push(offset as i32);
-        }
-
-
-        let mut query_builder = sqlx::query_as::<_, Task>(&query);
-
-        // フィルターのバインド値がある場合
-        if !filter_bind_values.is_empty() {
-            for (_index, value) in filter_bind_values.iter().enumerate() {
-                match value {
-                    FilterValue::I64(v) => query_builder = query_builder.bind(v),
-                    FilterValue::String(v) => query_builder = query_builder.bind(v),
-                }
-            }
-        }
-
-        // ページングのバインド値がある場合
-        if !page_bind_values.is_empty() {
-            for v in page_bind_values {
-                query_builder = query_builder.bind(v);
-            }
-        }
-
-        let result = query_builder.fetch_all(&mut *tx).await.map_err(|e| {
-            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
-                ErrorKey::TaskGetByFilterFailed,
-                e.to_string()
-            )))
-        })?;
+        let result = get_tasks_with_pagination_with_transaction(
+            &mut tx, 
+            page, 
+            page_size, 
+            filter,
+            None
+        ).await?;
 
         tx.commit().await.map_err(|e| {
             DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
@@ -288,14 +233,14 @@ impl TaskRepository {
     }
 
     pub async fn update_task(&self, task: Task) -> Result<Task, DBAccessError> {
-        if task.id.is_none() {
+        if task.task_id.is_none() {
             return Err(DBAccessError::ValidationError(get_error_message(
                 ErrorKey::TaskIdInvalid,
-                format!("ID = {}", task.id.unwrap()),
+                format!("ID = {}", task.task_id.unwrap()),
             )));
         }
 
-        validate_task_id(task.id)?;
+        validate_task_id(task.task_id)?;
         validate_task_project_id(task.project_id)?;
         validate_task_parent_id(task.parent_id)?;
         validate_task_level(task.level)?;
@@ -306,11 +251,11 @@ impl TaskRepository {
 
         let mut tx = self.pool.begin().await?;
 
-        let _ = get_task_by_id_with_transaction(task.id.unwrap(), &mut tx).await?;
+        let _ = get_task_by_id_with_transaction(task.task_id.unwrap(), &mut tx).await?;
 
         self.validate_project_id_is_exist(task.project_id, &mut tx)
             .await?;
-        self.validate_parent_relation(task.parent_id, task.level, task.id, &mut tx)
+        self.validate_parent_relation(task.parent_id, task.level, task.task_id, &mut tx)
             .await?;
 
         let now = Utc::now().timestamp();
@@ -319,8 +264,8 @@ impl TaskRepository {
             r#"
                 UPDATE tasks 
                 SET parent_id = $1, level = $2, name = $3, description = $4, status = $5, deadline = $6, updated_at = $7
-                WHERE id = $8
-                RETURNING id, project_id, parent_id, level, name, description, status, deadline, created_at, updated_at
+                WHERE task_id = $8
+                RETURNING task_id, project_id, parent_id, level, name, description, status, deadline, created_at, updated_at
             "#,
             task.parent_id,
             task.level,
@@ -329,7 +274,7 @@ impl TaskRepository {
             task.status,
             task.deadline,
             now,
-            task.id,
+            task.task_id,
         )
         .fetch_one(&mut *tx)
         .await;
@@ -359,7 +304,7 @@ impl TaskRepository {
 
         let result = sqlx::query!(
             r#"
-                DELETE FROM tasks WHERE id = $1
+                DELETE FROM tasks WHERE task_id = $1
             "#,
             id,
         )
@@ -385,7 +330,7 @@ impl TaskRepository {
 }
 
 
-fn build_where_clause(filter: &TaskFilter) -> (String, Vec<FilterValue>) {
+fn build_where_clause(filter: &TaskFilter, user_ids: Option<&Vec<i64>>) -> (String, Vec<FilterValue>) {
     let mut where_calses = Vec::new();
     let mut bind_values: Vec<FilterValue> = Vec::new();
 
@@ -475,6 +420,18 @@ fn build_where_clause(filter: &TaskFilter) -> (String, Vec<FilterValue>) {
         bind_values.push(FilterValue::I64(filter.updated_at_to.unwrap()));
     }
 
+    if user_ids.is_some() {
+        // バインド値の追加
+        let mut id_idx = 0;
+        let mut id_placeholders: Vec<String> = Vec::new();
+        for id in user_ids.as_ref().unwrap().iter() {
+            id_placeholders.push(format!("${}", index + id_idx));
+            bind_values.push(FilterValue::I64(*id));
+            id_idx += 1;
+        }
+        where_calses.push(format!("user_assign.user_id IN({})", id_placeholders.join(",")));
+    }
+
     if !where_calses.is_empty() {
         (
             format!(" WHERE {}", where_calses.join(" AND ")),
@@ -533,9 +490,9 @@ pub async fn get_task_by_id_with_transaction(
     let result = sqlx::query_as!(
         Task,
         r#"
-            SELECT id, project_id, parent_id, level, name, description, status, deadline, created_at, updated_at
+            SELECT task_id, project_id, parent_id, level, name, description, status, deadline, created_at, updated_at
             FROM tasks
-            WHERE id = $1
+            WHERE task_id = $1
         "#,
         id
     )
@@ -556,10 +513,17 @@ pub async fn get_task_by_id_with_transaction(
 pub async fn get_tasks_count_with_transaction(
     tx: &mut Transaction<'_, Sqlite>,
     filter: Option<&TaskFilter>,
+    user_ids: Option<&Vec<i64>>
 ) -> Result<i64, DBAccessError> {
-    let query = r#"
+    let mut query = String::from(r#"
         SELECT COUNT(*) FROM tasks
-    "#;
+    "#);
+
+    if user_ids.is_some() && user_ids.unwrap().len() > 0 {
+        query.push_str(r#"
+            INNER JOIN user_assign ON tasks.task_id = user_assign.task_id
+        "#);
+    }
 
     let result  = match filter {
         Some(filter) => {
@@ -567,7 +531,7 @@ pub async fn get_tasks_count_with_transaction(
                 return Ok(0);
             }
 
-            let (where_clause, bind_values) = build_where_clause(filter);
+            let (where_clause, bind_values) = build_where_clause(filter, user_ids);
             let query = format!("{} {}", query, where_clause);
             let mut query_builder = sqlx::query_scalar::<_, i64>(&query);
 
@@ -594,4 +558,102 @@ pub async fn get_tasks_count_with_transaction(
 
     log::debug!("Get tasks count with transaction: {:?}", result);
     Ok(result)
+}
+
+pub async fn get_tasks_with_pagination_with_transaction(
+    tx: &mut Transaction<'_, Sqlite>,
+    page: Option<&i32>,
+    page_size: Option<&i32>,
+    filter: Option<&TaskFilter>,
+    user_ids: Option<&Vec<i64>>
+) -> Result<Vec<Task>, DBAccessError> {
+    validate_pagination(page, page_size)?;
+
+    let mut query= String::from(r#"
+        SELECT 
+            tasks.task_id, tasks.project_id, tasks.parent_id, tasks.level, tasks.name, 
+            tasks.description, tasks.status, tasks.deadline, tasks.created_at, tasks.updated_at
+        FROM tasks
+    "#);
+    let mut page_bind_values: Vec<i32> = Vec::new();
+    let mut filter_bind_values: Vec<FilterValue> = Vec::new();
+
+    if user_ids.is_some() && user_ids.unwrap().len() > 0 {
+        query.push_str(r#"
+            INNER JOIN user_assign ON tasks.task_id = user_assign.task_id
+        "#);
+    }
+
+    // クエリのバインド値のインデックス
+    let mut index = 1;
+
+    // フィルターがある場合
+    if filter.is_some() {
+        if validate_filter(filter.as_ref().unwrap()).is_err() {
+            return Ok(Vec::new());
+        }
+        let (where_clause, bind_values) = build_where_clause(
+            filter.as_ref().unwrap(),
+            user_ids
+        );
+        query.push_str(&format!(" {}", where_clause));
+
+        // クエリのバインド値のインデックスを更新
+        index = bind_values.len() + 1;
+        filter_bind_values = bind_values;
+    }
+
+
+    query.push_str(" ORDER BY tasks.task_id ASC");
+
+    // ページングがある場合
+    if page.is_some() && page_size.is_some() {
+        let page = page.unwrap();
+        let page_size = page_size.unwrap();
+        let offset = (*page - 1) * *page_size;
+        let limit = *page_size;
+
+        let count = get_tasks_count_with_transaction(tx, filter, user_ids).await?;
+
+        if offset as i64 > count {
+            return Err(DBAccessError::NotFoundError(get_error_message(
+                ErrorKey::TaskGetPaginationNotFound,
+                format!("Offset = {}, Count = {}", offset, count),
+            )));
+        }
+        query.push_str(&format!(" LIMIT ${} OFFSET ${}", index, index + 1));
+        page_bind_values.push(limit as i32);
+        page_bind_values.push(offset as i32);
+    }
+
+
+    let mut query_builder = sqlx::query_as::<_, Task>(&query);
+
+    // フィルターのバインド値がある場合
+    if !filter_bind_values.is_empty() {
+        for (_index, value) in filter_bind_values.iter().enumerate() {
+            match value {
+                FilterValue::I64(v) => query_builder = query_builder.bind(v),
+                FilterValue::String(v) => query_builder = query_builder.bind(v),
+            }
+        }
+    }
+
+    // ページングのバインド値がある場合
+    if !page_bind_values.is_empty() {
+        for v in page_bind_values {
+            query_builder = query_builder.bind(v);
+        }
+    }
+
+    let result = query_builder.fetch_all(&mut **tx).await.map_err(|e| {
+        DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+            ErrorKey::TaskGetByFilterFailed,
+            e.to_string()
+        )))
+    })?;
+
+    log::debug!("Get tasks by filter: {:?}", result);
+
+    Ok(deduplicate(result))
 }
