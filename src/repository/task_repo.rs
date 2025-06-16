@@ -1,6 +1,7 @@
 use crate::errors::db_error::DBAccessError;
 use crate::errors::messages::{ErrorKey, get_error_message};
 use crate::models::{Task, task::TaskFilter};
+use crate::enums::TaskFilterValue;
 use crate::repository::project_repo::get_project_by_id_with_transaction;
 use crate::repository::validations::{
     validate_pagination, validate_task_description, validate_task_id, validate_task_level, validate_task_name, validate_task_parent_id, validate_task_project_id, validate_task_status, validate_task_unix_timestamp, validate_task_unix_timestamp_or_none
@@ -11,12 +12,6 @@ use sqlx::{Pool, Sqlite, Transaction};
 
 pub struct TaskRepository {
     pool: Pool<Sqlite>,
-}
-
-#[derive(Debug)]
-enum FilterValue {
-    I64(i64),
-    String(String),
 }
 
 fn deduplicate(tasks: Vec<Task>) -> Vec<Task> {
@@ -330,39 +325,39 @@ impl TaskRepository {
 }
 
 
-fn build_where_clause(filter: &TaskFilter, user_ids: Option<&Vec<i64>>) -> (String, Vec<FilterValue>) {
+pub fn build_task_where_clause(filter: &TaskFilter, user_ids: Option<&Vec<i64>>) -> (String, Vec<TaskFilterValue>) {
     let mut where_calses = Vec::new();
-    let mut bind_values: Vec<FilterValue> = Vec::new();
+    let mut bind_values: Vec<TaskFilterValue> = Vec::new();
 
     let mut index = 1;
     if filter.project_id.is_some() {
         where_calses.push(format!("tasks.project_id = ${}", index));
-        bind_values.push(FilterValue::I64(filter.project_id.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.project_id.unwrap()));
         index += 1;
     }
     if filter.parent_id.is_some() {
         where_calses.push(format!("tasks.parent_id = ${}", index));
-        bind_values.push(FilterValue::I64(filter.parent_id.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.parent_id.unwrap()));
         index += 1;
     }
     if filter.level.is_some() {
         where_calses.push(format!("tasks.level = ${}", index));
-        bind_values.push(FilterValue::I64(filter.level.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.level.unwrap()));
         index += 1;
     }
     if filter.name.is_some() {
         where_calses.push(format!("tasks.name LIKE '%' || ${} || '%'", index));
-        bind_values.push(FilterValue::String(filter.name.as_ref().unwrap().clone()));
+        bind_values.push(TaskFilterValue::String(filter.name.as_ref().unwrap().clone()));
         index += 1;
     }
     if filter.description.is_some() {
         where_calses.push(format!("tasks.description LIKE '%' || ${} || '%'", index));
-        bind_values.push(FilterValue::String(filter.description.as_ref().unwrap().clone()));
+        bind_values.push(TaskFilterValue::String(filter.description.as_ref().unwrap().clone()));
         index += 1;
     }
     if filter.status.is_some() {
         where_calses.push(format!("tasks.status = ${}", index));
-        bind_values.push(FilterValue::I64(filter.status.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.status.unwrap()));
         index += 1;
     }
 
@@ -372,16 +367,16 @@ fn build_where_clause(filter: &TaskFilter, user_ids: Option<&Vec<i64>>) -> (Stri
             index,
             index + 1
         ));
-        bind_values.push(FilterValue::I64(filter.deadline_from.unwrap()));
-        bind_values.push(FilterValue::I64(filter.deadline_to.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.deadline_from.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.deadline_to.unwrap()));
         index += 2;
     } else if filter.deadline_from.is_some() && filter.deadline_to.is_none() {
         where_calses.push(format!("tasks.deadline >= ${}", index));
-        bind_values.push(FilterValue::I64(filter.deadline_from.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.deadline_from.unwrap()));
         index += 1;
     } else if filter.deadline_to.is_some() && filter.deadline_from.is_none() {
         where_calses.push(format!("tasks.deadline <= ${}", index));
-        bind_values.push(FilterValue::I64(filter.deadline_to.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.deadline_to.unwrap()));
         index += 1;
     }
 
@@ -391,16 +386,16 @@ fn build_where_clause(filter: &TaskFilter, user_ids: Option<&Vec<i64>>) -> (Stri
             index,
             index + 1
         ));
-        bind_values.push(FilterValue::I64(filter.created_at_from.unwrap()));
-        bind_values.push(FilterValue::I64(filter.created_at_to.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.created_at_from.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.created_at_to.unwrap()));
         index += 2;
     } else if filter.created_at_from.is_some() && filter.created_at_to.is_none() {
         where_calses.push(format!("tasks.created_at >= ${}", index));
-        bind_values.push(FilterValue::I64(filter.created_at_from.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.created_at_from.unwrap()));
         index += 1;
     } else if filter.created_at_to.is_some() && filter.created_at_from.is_none() {
         where_calses.push(format!("tasks.created_at <= ${}", index));
-        bind_values.push(FilterValue::I64(filter.created_at_to.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.created_at_to.unwrap()));
         index += 1;
     }
 
@@ -410,26 +405,35 @@ fn build_where_clause(filter: &TaskFilter, user_ids: Option<&Vec<i64>>) -> (Stri
             index,
             index + 1
         ));
-        bind_values.push(FilterValue::I64(filter.updated_at_from.unwrap()));
-        bind_values.push(FilterValue::I64(filter.updated_at_to.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.updated_at_from.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.updated_at_to.unwrap()));
     } else if filter.updated_at_from.is_some() && filter.updated_at_to.is_none() {
         where_calses.push(format!("tasks.updated_at >= ${}", index));
-        bind_values.push(FilterValue::I64(filter.updated_at_from.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.updated_at_from.unwrap()));
     } else if filter.updated_at_to.is_some() && filter.updated_at_from.is_none() {
         where_calses.push(format!("tasks.updated_at <= ${}", index));
-        bind_values.push(FilterValue::I64(filter.updated_at_to.unwrap()));
+        bind_values.push(TaskFilterValue::I64(filter.updated_at_to.unwrap()));
     }
 
     if user_ids.is_some() {
         // バインド値の追加
         let mut id_idx = 0;
         let mut id_placeholders: Vec<String> = Vec::new();
-        for id in user_ids.as_ref().unwrap().iter() {
+        for id in user_ids.unwrap() {
             id_placeholders.push(format!("${}", index + id_idx));
-            bind_values.push(FilterValue::I64(*id));
+            bind_values.push(TaskFilterValue::I64(*id));
             id_idx += 1;
         }
-        where_calses.push(format!("user_assign.user_id IN({})", id_placeholders.join(",")));
+        where_calses.push(format!(
+            r#"
+                EXISTS (
+                    SELECT 1 FROM user_assign
+                    WHERE user_assign.task_id = tasks.task_id
+                      AND user_assign.user_id IN({})
+                )
+            "#, 
+            id_placeholders.join(","))
+        );
     }
 
     if !where_calses.is_empty() {
@@ -442,7 +446,7 @@ fn build_where_clause(filter: &TaskFilter, user_ids: Option<&Vec<i64>>) -> (Stri
     }
 }
 
-fn validate_filter(filter: &TaskFilter) -> Result<()> {
+pub fn validate_task_filter(filter: &TaskFilter) -> Result<&TaskFilter> {
     if filter.project_id.is_some() {
         validate_task_project_id(filter.project_id.unwrap())?;
     }
@@ -479,7 +483,7 @@ fn validate_filter(filter: &TaskFilter) -> Result<()> {
     if let Some(updated_at) = filter.updated_at_to {
         validate_task_unix_timestamp(updated_at)?;
     }
-    Ok(())
+    Ok(filter)
 }
 
 
@@ -515,30 +519,25 @@ pub async fn get_tasks_count_with_transaction(
     filter: Option<&TaskFilter>,
     user_ids: Option<&Vec<i64>>
 ) -> Result<i64, DBAccessError> {
-    let mut query = String::from(r#"
+    let query = String::from(r#"
         SELECT COUNT(*) FROM tasks
     "#);
 
-    if user_ids.is_some() && user_ids.unwrap().len() > 0 {
-        query.push_str(r#"
-            INNER JOIN user_assign ON tasks.task_id = user_assign.task_id
-        "#);
-    }
-
     let result  = match filter {
         Some(filter) => {
-            if validate_filter(filter).is_err() {
-                return Ok(0);
-            }
+            match validate_task_filter(filter) {
+                Ok(filter) => filter,
+                Err(_) => return Ok(0),
+            };
 
-            let (where_clause, bind_values) = build_where_clause(filter, user_ids);
+            let (where_clause, bind_values) = build_task_where_clause(filter, user_ids);
             let query = format!("{} {}", query, where_clause);
             let mut query_builder = sqlx::query_scalar::<_, i64>(&query);
 
             for (_index, value) in bind_values.iter().enumerate() {
                 match value {
-                    FilterValue::I64(v) => query_builder = query_builder.bind(v),
-                    FilterValue::String(v) => query_builder = query_builder.bind(v),
+                    TaskFilterValue::I64(v) => query_builder = query_builder.bind(v),
+                    TaskFilterValue::String(v) => query_builder = query_builder.bind(v),
                 }
             }
 
@@ -567,8 +566,6 @@ pub async fn get_tasks_with_pagination_with_transaction(
     filter: Option<&TaskFilter>,
     user_ids: Option<&Vec<i64>>
 ) -> Result<Vec<Task>, DBAccessError> {
-    validate_pagination(page, page_size)?;
-
     let mut query= String::from(r#"
         SELECT 
             tasks.task_id, tasks.project_id, tasks.parent_id, tasks.level, tasks.name, 
@@ -576,7 +573,7 @@ pub async fn get_tasks_with_pagination_with_transaction(
         FROM tasks
     "#);
     let mut page_bind_values: Vec<i32> = Vec::new();
-    let mut filter_bind_values: Vec<FilterValue> = Vec::new();
+    let mut filter_bind_values: Vec<TaskFilterValue> = Vec::new();
 
     if user_ids.is_some() && user_ids.unwrap().len() > 0 {
         query.push_str(r#"
@@ -588,12 +585,16 @@ pub async fn get_tasks_with_pagination_with_transaction(
     let mut index = 1;
 
     // フィルターがある場合
-    if filter.is_some() {
-        if validate_filter(filter.as_ref().unwrap()).is_err() {
+    if filter.is_some() || (user_ids.is_some() && user_ids.unwrap().len() > 0) {
+        let unwrapped_filter = match filter {
+            Some(filter) => filter,
+            None => &TaskFilter::new(),
+        };
+        if validate_task_filter(unwrapped_filter).is_err() {
             return Ok(Vec::new());
         }
-        let (where_clause, bind_values) = build_where_clause(
-            filter.as_ref().unwrap(),
+        let (where_clause, bind_values) = build_task_where_clause(
+            unwrapped_filter,
             user_ids
         );
         query.push_str(&format!(" {}", where_clause));
@@ -607,25 +608,18 @@ pub async fn get_tasks_with_pagination_with_transaction(
     query.push_str(" ORDER BY tasks.task_id ASC");
 
     // ページングがある場合
+    let count = get_tasks_count_with_transaction(tx, filter, user_ids).await?;
+    validate_pagination(page, page_size, &count)?;
     if page.is_some() && page_size.is_some() {
         let page = page.unwrap();
         let page_size = page_size.unwrap();
         let offset = (*page - 1) * *page_size;
         let limit = *page_size;
 
-        let count = get_tasks_count_with_transaction(tx, filter, user_ids).await?;
-
-        if offset as i64 > count {
-            return Err(DBAccessError::NotFoundError(get_error_message(
-                ErrorKey::TaskGetPaginationNotFound,
-                format!("Offset = {}, Count = {}", offset, count),
-            )));
-        }
         query.push_str(&format!(" LIMIT ${} OFFSET ${}", index, index + 1));
         page_bind_values.push(limit as i32);
         page_bind_values.push(offset as i32);
     }
-
 
     let mut query_builder = sqlx::query_as::<_, Task>(&query);
 
@@ -633,8 +627,8 @@ pub async fn get_tasks_with_pagination_with_transaction(
     if !filter_bind_values.is_empty() {
         for (_index, value) in filter_bind_values.iter().enumerate() {
             match value {
-                FilterValue::I64(v) => query_builder = query_builder.bind(v),
-                FilterValue::String(v) => query_builder = query_builder.bind(v),
+                TaskFilterValue::I64(v) => query_builder = query_builder.bind(v),
+                TaskFilterValue::String(v) => query_builder = query_builder.bind(v),
             }
         }
     }
@@ -654,6 +648,8 @@ pub async fn get_tasks_with_pagination_with_transaction(
     })?;
 
     log::debug!("Get tasks by filter: {:?}", result);
+
+    println!("result: {:?}", result);
 
     Ok(deduplicate(result))
 }

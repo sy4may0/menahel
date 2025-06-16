@@ -25,4 +25,9 @@ pub fn add_repository_error_messages(
     page_size_too_large.insert("en", "Page size too large");
     page_size_too_large.insert("jp", "ページサイズが大きすぎます");
     map.insert(ErrorKey::PageSizeTooLarge, page_size_too_large);
+
+    let mut no_data_found_in_pagination = HashMap::new();
+    no_data_found_in_pagination.insert("en", "No data found in pagination");
+    no_data_found_in_pagination.insert("jp", "ページングにデータが見つかりません");
+    map.insert(ErrorKey::NoDataFoundInPagination, no_data_found_in_pagination);
 }

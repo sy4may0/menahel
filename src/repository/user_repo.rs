@@ -6,7 +6,6 @@ use crate::repository::validations::{
     validate_pagination, validate_user_email, validate_user_id, validate_user_id_is_none, validate_user_name, validate_user_password
 };
 use sqlx::{Pool, Sqlite, Transaction};
-use std::collections::HashSet;
 
 pub struct UserRepository {
     pool: Pool<Sqlite>,
@@ -171,10 +170,6 @@ impl UserRepository {
         page: &i32,
         page_size: &i32,
     ) -> Result<Vec<UserNoPassword>, DBAccessError> {
-        validate_pagination(Some(page), Some(page_size))?;
-        let offset = (page - 1) * page_size;
-        let limit = page_size;
-
         let mut tx = self.pool.begin().await.map_err(|e| {
             DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
                 ErrorKey::ProjectGetAllFailed,
@@ -182,6 +177,10 @@ impl UserRepository {
             )))
         })?;
         let count = get_users_count_with_transaction(&mut tx, None, None).await?;
+        validate_pagination(Some(page), Some(page_size), &count)?;
+
+        let offset = (page - 1) * page_size;
+        let limit = page_size;
 
         if offset as i64 >= count {
             return Err(DBAccessError::NotFoundError(get_error_message(
@@ -466,7 +465,6 @@ pub async fn get_users_with_pagination_with_transaction(
     filter: Option<&UserFilter>,
     task_ids: Option<&Vec<i64>>,
 ) -> Result<Vec<UserNoPassword>, DBAccessError> {
-    validate_pagination(page, page_size)?;
 
     let mut query = String::from(r#"
         SELECT users.user_id, users.username, users.email, users.password_hash
@@ -485,12 +483,16 @@ pub async fn get_users_with_pagination_with_transaction(
     let mut index = 1;
 
     // フィルターがある場合
-    if filter.is_some() {
-        if validate_filter(filter.as_ref().unwrap()).is_err() {
+    if filter.is_some() || (task_ids.is_some() && task_ids.unwrap().len() > 0) {
+        let unwrapped_filter = match filter {
+            Some(filter) => filter,
+            None => &UserFilter::new(),
+        };
+        if validate_filter(unwrapped_filter).is_err() {
             return Ok(Vec::new());
         }
         let (where_clause, bind_values) = build_where_clause(
-            filter.as_ref().unwrap(), task_ids
+            unwrapped_filter, task_ids
         );
         query.push_str(&format!(" {}", where_clause));
 
@@ -502,20 +504,14 @@ pub async fn get_users_with_pagination_with_transaction(
     query.push_str(" ORDER BY users.user_id ASC");
 
     // ページングがある場合
+    let count = get_users_count_with_transaction(tx, filter, task_ids).await?;
+    validate_pagination(page, page_size, &count)?;
     if page.is_some() && page_size.is_some() {
-        let page = page.unwrap();
+       let page = page.unwrap();
         let page_size = page_size.unwrap();
         let offset = (*page - 1) * *page_size;
         let limit = *page_size;
 
-        let count = get_users_count_with_transaction(tx, filter, task_ids).await?;
-
-        if offset as i64 >= count {
-            return Err(DBAccessError::NotFoundError(get_error_message(
-                ErrorKey::UserGetUsersPaginationNotFound,
-                format!("Offset: {}, Count: {}", offset, count),
-            )));
-        }
         query.push_str(&format!(" LIMIT ${} OFFSET ${}", index, index + 1));
         page_bind_values.push(limit as i32);
         page_bind_values.push(offset as i32);

@@ -11,6 +11,7 @@ use crate::errors::message_def::project_handler::add_project_handler_error_messa
 use crate::errors::message_def::task_handler::add_task_handler_error_messages;
 use crate::errors::message_def::user_assign_handler::add_user_assign_handler_error_messages;
 use crate::errors::message_def::task_user::add_task_user_error_messages;
+use crate::errors::message_def::repository::add_repository_error_messages;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ErrorKey {
@@ -52,7 +53,6 @@ pub enum ErrorKey {
     ProjectDeleteFailed,
     ProjectDeleteFailedByIdNotFound,
     ProjectGetProjectsCountFailed,
-    ProjectGetPaginationNotFound,
 
     // タスク関連のエラー
     TaskIdInvalid,
@@ -134,6 +134,7 @@ pub enum ErrorKey {
     NoPageSizeSpecified,
     InvalidPagination,
     PageSizeTooLarge,
+    NoDataFoundInPagination,
 
     // ユーザーハンドラ関連のエラー
     UserHandlerGetUsersInvalidPage,
@@ -221,7 +222,6 @@ impl fmt::Display for ErrorKey {
                 write!(f, "ProjectDeleteFailedByIdNotFound")
             }
             ErrorKey::ProjectGetProjectsCountFailed => write!(f, "ProjectGetProjectsCountFailed"),
-            ErrorKey::ProjectGetPaginationNotFound => write!(f, "ProjectGetPaginationNotFound"),
 
             // タスク関連のエラー
             ErrorKey::TaskIdInvalid => write!(f, "TaskIdInvalid"),
@@ -312,6 +312,7 @@ impl fmt::Display for ErrorKey {
             ErrorKey::NoPageSizeSpecified => write!(f, "NoPageSizeSpecified"),
             ErrorKey::InvalidPagination => write!(f, "InvalidPagination"),
             ErrorKey::PageSizeTooLarge => write!(f, "PageSizeTooLarge"),
+            ErrorKey::NoDataFoundInPagination => write!(f, "NoDataFoundInPagination"),
 
             // タスク+ユーザー関連のエラー
             ErrorKey::TaskUserGetAllFailed => write!(f, "TaskUserGetAllFailed"),
@@ -380,6 +381,7 @@ static ERROR_MESSAGES: Lazy<HashMap<ErrorKey, HashMap<&'static str, &'static str
         add_task_handler_error_messages(&mut map);
         add_user_assign_handler_error_messages(&mut map);
         add_task_user_error_messages(&mut map);
+        add_repository_error_messages(&mut map);
 
         map
     });

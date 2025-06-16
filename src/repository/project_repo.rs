@@ -146,11 +146,6 @@ impl ProjectRepository {
         page: &i32,
         page_size: &i32,
     ) -> Result<Vec<Project>, DBAccessError> {
-        validate_pagination(Some(page), Some(page_size))?;
-
-        let offset = (*page - 1) * *page_size;
-        let limit = *page_size;
-
         let mut tx = self.pool.begin().await.map_err(
             |e| {
                 DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
@@ -159,14 +154,13 @@ impl ProjectRepository {
                 )))
             }
         )?;
-        let count = get_projects_count_with_transaction(&mut tx).await?;
 
-        if offset as i64 > count {
-            return Err(DBAccessError::NotFoundError(get_error_message(
-                ErrorKey::ProjectGetPaginationNotFound,
-                format!("Offset = {}, Count = {}", offset, count)
-            )));
-        }
+
+        let count = get_projects_count_with_transaction(&mut tx).await?;
+        validate_pagination(Some(page), Some(page_size), &count)?;
+
+        let offset = (*page - 1) * *page_size;
+        let limit = *page_size;
         log::debug!("Get users with pagination: offset: {}, limit: {}", offset, limit);
 
         let result = sqlx::query_as!(

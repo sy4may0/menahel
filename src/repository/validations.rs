@@ -318,7 +318,7 @@ pub fn validate_comment_content(content: &str) -> Result<(), DBAccessError> {
     Ok(())
 }
 
-pub fn validate_pagination(page: Option<&i32>, page_size: Option<&i32>) -> Result<(), DBAccessError> {
+pub fn validate_pagination(page: Option<&i32>, page_size: Option<&i32>, max_count: &i64) -> Result<(), DBAccessError> {
     if page.is_none() && page_size.is_some() {
         return Err(DBAccessError::ValidationError(get_error_message(
             ErrorKey::NoPageSpecified,
@@ -351,6 +351,14 @@ pub fn validate_pagination(page: Option<&i32>, page_size: Option<&i32>) -> Resul
         return Err(DBAccessError::ValidationError(get_error_message(
             ErrorKey::PageSizeTooLarge,
             format!("Page = {}, PageSize = {}", *page, *page_size),
+        )));
+    }
+
+    let offset = (*page - 1) * *page_size;
+    if offset as i64 > *max_count {
+        return Err(DBAccessError::ValidationError(get_error_message(
+            ErrorKey::InvalidPagination,
+            format!("Offset = {}, MaxCount = {}", offset, *max_count),
         )));
     }
 

@@ -194,11 +194,7 @@ impl UserAssignRepository {
         page: &i32,
         page_size: &i32,
     ) -> Result<Vec<UserAssign>, DBAccessError> {
-        validate_pagination(Some(page), Some(page_size))?;
-        let offset = (page - 1) * page_size;
-        let limit = page_size;
-
-        let mut tx = self.pool.begin().await.map_err(|e| {
+         let mut tx = self.pool.begin().await.map_err(|e| {
             DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
                 ErrorKey::UserAssignGetAllFailed,
                 e.to_string()
@@ -206,12 +202,11 @@ impl UserAssignRepository {
         })?;
         let count = get_user_assigns_count_with_transaction(&mut tx, None).await?;
 
-        if offset as i64 >= count {
-            return Err(DBAccessError::NotFoundError(get_error_message(
-                ErrorKey::UserAssignGetPaginationNotFound,
-                format!("Offset: {}, Count: {}", offset, count),
-            )));
-        }
+
+        validate_pagination(Some(page), Some(page_size), &count)?;
+        let offset = (page - 1) * page_size;
+        let limit = page_size;
+        
         log::debug!("Get user assigns with pagination: offset: {}, limit: {}", offset, limit);
 
         let result = sqlx::query_as!(
@@ -261,7 +256,6 @@ impl UserAssignRepository {
         page: Option<&i32>,
         page_size: Option<&i32>,
     ) -> Result<Vec<UserAssign>, DBAccessError> {
-        validate_pagination(page, page_size)?;
 
         let mut query = String::from(r#"
             SELECT user_assign_id, user_id, task_id
@@ -289,20 +283,14 @@ impl UserAssignRepository {
             filter_bind_values = bind_values;
         }
 
+        let count = get_user_assigns_count_with_transaction(&mut tx, filter).await?;
+        validate_pagination(page, page_size, &count)?;
         if page.is_some() && page_size.is_some() {
-            let page = page.unwrap();
+           let page = page.unwrap();
             let page_size = page_size.unwrap();
             let offset = (*page - 1) * *page_size;
             let limit = *page_size;
 
-            let count = get_user_assigns_count_with_transaction(&mut tx, filter).await?;
-
-            if offset as i64 > count {
-                return Err(DBAccessError::NotFoundError(get_error_message(
-                    ErrorKey::UserAssignGetPaginationNotFound,
-                    format!("Offset = {}, Count = {}", offset, count),
-                )));
-            }
             query.push_str(&format!(" LIMIT ${} OFFSET ${}", index, index + 1));
             page_bind_values.push(limit as i32);
             page_bind_values.push(offset as i32);

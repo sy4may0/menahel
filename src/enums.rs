@@ -90,4 +90,10 @@ impl TaskStatus {
             ))),
         }
     }
+
+}
+
+pub enum TaskFilterValue {
+    I64(i64),
+    String(String),
 }
