@@ -1,6 +1,7 @@
 use crate::enums::TaskLevel;
 use crate::errors::db_error::DBAccessError;
 use crate::errors::messages::{ErrorKey, get_error_message};
+use crate::models::repository_model::comment::CommentWithUser;
 use crate::models::Comment;
 use crate::repository::task_repo::get_task_by_id_with_transaction;
 use crate::repository::user_repo::get_user_by_id_with_transaction;
@@ -87,16 +88,23 @@ impl CommentRepository {
         }
     }
 
-    pub async fn get_comment_by_id(&self, id: i64) -> Result<Option<Comment>, DBAccessError> {
-        sqlx::query_as!(
-            Comment,
+    pub async fn get_comment_by_id(&self, id: i64) -> Result<Option<CommentWithUser>, DBAccessError> {
+        sqlx::query_as::<_, CommentWithUser>(
             r#"
-                SELECT comment_id, user_id, task_id, content, created_at, updated_at
+                SELECT comments.comment_id, comments.user_id, comments.task_id, comments.content, comments.created_at, comments.updated_at,
+                COALESCE(
+                    json_object(
+                        'user_id', users.user_id,
+                        'username', users.username,
+                        'email', users.email
+                    ), '{}'
+                ) AS user
                 FROM comments
+                INNER JOIN users ON comments.user_id = users.user_id
                 WHERE comment_id = $1
-            "#,
-            id,
+            "#
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| {
@@ -110,16 +118,23 @@ impl CommentRepository {
     pub async fn get_comment_by_task_id(
         &self,
         task_id: i64,
-    ) -> Result<Vec<Comment>, DBAccessError> {
-        sqlx::query_as!(
-            Comment,
+    ) -> Result<Vec<CommentWithUser>, DBAccessError> {
+        sqlx::query_as::<_, CommentWithUser>(
             r#"
-                SELECT comment_id, user_id, task_id, content, created_at, updated_at
+                SELECT comments.comment_id, comments.user_id, comments.task_id, comments.content, comments.created_at, comments.updated_at,
+                COALESCE(
+                    json_object(
+                        'user_id', users.user_id,
+                        'username', users.username,
+                        'email', users.email
+                    ), '{}'
+                ) AS user
                 FROM comments
+                INNER JOIN users ON comments.user_id = users.user_id
                 WHERE task_id = $1
-            "#,
-            task_id,
+            "#
         )
+        .bind(task_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| {
@@ -133,16 +148,23 @@ impl CommentRepository {
     pub async fn get_comment_by_user_id(
         &self,
         user_id: i64,
-    ) -> Result<Vec<Comment>, DBAccessError> {
-        sqlx::query_as!(
-            Comment,
+    ) -> Result<Vec<CommentWithUser>, DBAccessError> {
+        sqlx::query_as::<_, CommentWithUser>(
             r#"
-                SELECT comment_id, user_id, task_id, content, created_at, updated_at
+                SELECT comments.comment_id, comments.user_id, comments.task_id, comments.content, comments.created_at, comments.updated_at,
+                COALESCE(
+                    json_object(
+                        'user_id', users.user_id,
+                        'username', users.username,
+                        'email', users.email
+                    ), '{}'
+                ) AS user
                 FROM comments
-                WHERE user_id = $1
-            "#,
-            user_id,
+                INNER JOIN users ON comments.user_id = users.user_id
+                WHERE comments.user_id = $1
+            "#
         )
+        .bind(user_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| {

@@ -106,6 +106,7 @@ mod comment_repo_test {
         assert_eq!(comment.user_id, 1);
         assert_eq!(comment.task_id, 3);
         assert_eq!(comment.content, "Test Comment 0");
+        assert_eq!(comment.user.user_id, Some(1));
     }
 
     #[sqlx::test(fixtures("comments"))]
@@ -125,6 +126,7 @@ mod comment_repo_test {
         assert_eq!(comments[0].user_id, 1);
         assert_eq!(comments[0].task_id, 3);
         assert_eq!(comments[0].content, "Test Comment 0");
+        assert_eq!(comments[0].user.user_id, Some(1));
     }
 
     #[sqlx::test(fixtures("comments"))]
@@ -143,6 +145,7 @@ mod comment_repo_test {
         assert_eq!(comments.len(), 3);
         for comment in comments {
             assert_eq!(comment.user_id, 1);
+            assert_eq!(comment.user.user_id, Some(1));
         }
     }
 
