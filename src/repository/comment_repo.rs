@@ -15,6 +15,11 @@ pub struct CommentRepository {
     pool: Pool<Sqlite>,
 }
 
+pub enum CommentFilterValue {
+    I64(i64),
+    String(String),
+}
+
 impl CommentRepository {
     pub fn new(pool: Pool<Sqlite>) -> Self {
         Self { pool }

@@ -5,6 +5,7 @@ mod task_handler_test {
     use crate::handlers::task::create_task;
     use crate::handlers::task::update_task;
     use crate::handlers::task::delete_task;
+    use crate::models::TaskUserResponse;
     use actix_web::{test, App, web};
     use crate::models::{Task, TaskResponse};
     use crate::models::ErrorResponse;
@@ -45,6 +46,29 @@ mod task_handler_test {
     }
 
     #[actix_web::test]
+    async fn test_get_tasks_with_user_ids() {
+        let pool = setup_test_db("task_handler_test", "test_get_tasks_with_user_ids").await;
+
+        let app = test::init_service(
+            App::new().service(get_tasks).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/tasks?with_user=true").to_request();
+        let res: TaskUserResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 0);
+        assert_eq!(res.results.len(), 11);
+        assert_eq!(res.message, "OK");
+        assert_eq!(res.count, 11);
+
+        for task in res.results {
+            if task.task_id == 2 {
+                assert_eq!(task.users.len(), 3);
+            }
+        }
+    }
+
+    #[actix_web::test]
     async fn test_get_tasks_with_pagination() {
         let pool = setup_test_db("task_handler_test", "test_get_tasks_with_pagination").await;
 
@@ -71,6 +95,43 @@ mod task_handler_test {
     }
 
     #[actix_web::test]
+    async fn test_get_tasks_with_user_pagination() {
+        let pool = setup_test_db("task_handler_test", "test_get_tasks_with_user_pagination").await;
+
+        let app = test::init_service(
+            App::new().service(get_tasks).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/tasks?with_user=true&page=1&page_size=4").to_request();
+        let res: TaskUserResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 0);
+        assert_eq!(res.results.len(), 4);
+        assert_eq!(res.message, "OK");
+        assert_eq!(res.count, 4);
+
+        for task in res.results {
+            if task.task_id == 2 {
+                assert_eq!(task.users.len(), 3);
+            }
+        }
+
+        let req = test::TestRequest::get().uri("/tasks?with_user=true&page=3&page_size=4").to_request();
+        let res: TaskUserResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 0);
+        assert_eq!(res.results.len(), 3);
+        assert_eq!(res.message, "OK");
+        assert_eq!(res.count, 3);
+
+        for task in res.results {
+            if task.task_id == 10 {
+                assert_eq!(task.users.len(), 1);
+            } 
+        }
+    }
+
+    #[actix_web::test]
     async fn test_get_tasks_with_pagination_over_page_size() {
         let pool = setup_test_db("task_handler_test", "test_get_tasks_with_pagination_over_page_size").await;
 
@@ -79,6 +140,21 @@ mod task_handler_test {
         ).await;
 
         let req = test::TestRequest::get().uri("/tasks?page=1&page_size=1000").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
+    }
+
+    #[actix_web::test]
+    async fn test_get_tasks_with_user_pagination_over_page_size() {
+        let pool = setup_test_db("task_handler_test", "test_get_tasks_with_user_pagination_over_page_size").await;
+
+        let app = test::init_service(
+            App::new().service(get_tasks).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/tasks?with_user=true&page=1&page_size=1000").to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
 
         assert_eq!(res.rc, 1);
@@ -107,6 +183,27 @@ mod task_handler_test {
     }
 
     #[actix_web::test]
+    async fn test_get_tasks_with_user_with_invalid_no_page_or_page_size() {
+        let pool = setup_test_db("task_handler_test", "test_get_tasks_with_invalid_user_ids").await;
+
+        let app = test::init_service(
+            App::new().service(get_tasks).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/tasks?with_user=true&page=1").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
+
+        let req = test::TestRequest::get().uri("/tasks?with_user=true&page_size=10").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
+    }
+
+    #[actix_web::test]
     async fn test_get_tasks_with_invalid_pagination_params() {
         let pool = setup_test_db("task_handler_test", "test_get_tasks_with_invalid_pagination_params").await;
 
@@ -128,6 +225,27 @@ mod task_handler_test {
     }
 
     #[actix_web::test]
+    async fn test_get_tasks_with_user_invalid_pagination_params() {
+        let pool = setup_test_db("task_handler_test", "test_get_tasks_with_user_invalid_pagination_params").await;
+
+        let app = test::init_service(
+            App::new().service(get_tasks).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/tasks?with_user=true&page=0&page_size=10").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
+
+        let req = test::TestRequest::get().uri("/tasks?with_user=true&page=1&page_size=0").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
+    }
+
+    #[actix_web::test]
     async fn test_get_all_tasks_by_target() {
         let pool = setup_test_db("task_handler_test", "test_get_all_tasks_by_target").await;
 
@@ -135,14 +253,17 @@ mod task_handler_test {
             App::new().service(get_tasks).app_data(web::Data::new(pool))
         ).await;
 
-        let req = test::TestRequest::get().uri("/tasks?target=all").to_request();
-        let res: TaskResponse = test::call_and_read_body_json(&app, req).await;
+        let req = test::TestRequest::get().uri("/tasks?with_user=true&page=0&page_size=10").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
 
-        assert_eq!(res.rc, 0);
-        assert_eq!(res.results.len(), 11);
-        assert_eq!(res.message, "OK");
-        assert_eq!(res.count, 11);
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
 
+        let req = test::TestRequest::get().uri("/tasks?with_user=true&page=1&page_size=0").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
     }
 
     #[actix_web::test]
@@ -178,6 +299,27 @@ mod task_handler_test {
     }   
 
     #[actix_web::test]
+    async fn test_get_tasks_by_id_with_user() {
+        let pool = setup_test_db("task_handler_test", "test_get_tasks_by_id_with_user").await;
+
+        let app = test::init_service(
+            App::new().service(get_tasks).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/tasks?target=id&id=2&with_user=true").to_request();
+        let res: TaskUserResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 0);
+        assert_eq!(res.results.len(), 1);
+        assert_eq!(res.message, "OK");
+        assert_eq!(res.count, 1);
+        assert_eq!(res.results[0].users.len(), 3);
+        assert_eq!(res.results[0].users[0].user_id, Some(0));
+        assert_eq!(res.results[0].users[1].user_id, Some(1));
+        assert_eq!(res.results[0].users[2].user_id, Some(2));
+    }
+
+    #[actix_web::test]
     async fn test_get_tasks_by_invalid_query() {
         let pool = setup_test_db("task_handler_test", "test_get_tasks_by_invalid_query").await;
 
@@ -208,6 +350,21 @@ mod task_handler_test {
     }
 
     #[actix_web::test]
+    async fn test_get_task_with_user_by_invalid_id() {
+        let pool = setup_test_db("task_handler_test", "test_get_task_with_user_by_invalid_id").await;
+
+        let app = test::init_service(
+            App::new().service(get_tasks).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/tasks?target=id&id=-1&with_user=true").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
+    }
+
+    #[actix_web::test]
     async fn test_get_task_by_filter() {
         let pool = setup_test_db("task_handler_test", "test_get_task_by_filter").await;
 
@@ -225,6 +382,30 @@ mod task_handler_test {
         for task in res.results {
             assert_eq!(task.level, 2);
             assert_eq!(task.project_id, 0);
+        }
+    }
+
+    #[actix_web::test]
+    async fn test_get_task_by_filter_with_user() {
+        let pool = setup_test_db("task_handler_test", "test_get_task_by_filter_with_user").await;
+
+        let app = test::init_service(
+            App::new().service(get_tasks).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/tasks?target=filter&project_id=0&level=2&with_user=true").to_request();
+        let res: TaskUserResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 0);
+        assert_eq!(res.results.len(), 6);
+        assert_eq!(res.message, "OK");
+        assert_eq!(res.count, 6);
+        for task in res.results {
+            assert_eq!(task.level, 2);
+            assert_eq!(task.project_id, 0);
+            if task.task_id == 2 {
+                assert_eq!(task.users.len(), 3);
+            }
         }
     }
 
@@ -250,6 +431,48 @@ mod task_handler_test {
     }
 
     #[actix_web::test]
+    async fn test_get_task_by_filter_with_user_pagination() {
+        let pool = setup_test_db("task_handler_test", "test_get_task_by_filter_with_user_pagination").await;
+
+        let app = test::init_service(
+            App::new().service(get_tasks).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/tasks?target=filter&project_id=0&level=2&with_user=true&page=1&page_size=4").to_request();
+        let res: TaskUserResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 0);
+        assert_eq!(res.results.len(), 4);
+        assert_eq!(res.message, "OK");
+        assert_eq!(res.count, 4);
+        for task in res.results {
+            assert_eq!(task.level, 2);
+            assert_eq!(task.project_id, 0);
+            if task.task_id == 2 {
+                assert_eq!(task.users.len(), 3);
+            }
+        }
+    }
+
+    #[actix_web::test]
+    async fn test_get_task_by_filter_with_user_ids() {
+        let pool = setup_test_db("task_handler_test", "test_get_task_by_filter_with_user_ids").await;
+
+        let app = test::init_service(
+            App::new().service(get_tasks).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/tasks?target=filter&level=2&user_ids=2&with_user=true").to_request();
+        let res: TaskUserResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 0);
+        assert_eq!(res.results.len(), 2);
+        assert_eq!(res.message, "OK");
+        assert_eq!(res.count, 2);
+        assert_eq!(res.results[0].users.len(), 3);
+    }
+
+    #[actix_web::test]
     async fn test_get_tasks_by_full_filter() {
         let pool = setup_test_db("task_handler_test", "test_get_tasks_by_full_filter").await;
 
@@ -270,8 +493,10 @@ mod task_handler_test {
         filter_value.push("created_at_to=3000");
         filter_value.push("updated_at_from=3000");
         filter_value.push("updated_at_to=3000");
+        filter_value.push("user_ids=0,1");
+        filter_value.push("with_user=true");
         let req = test::TestRequest::get().uri(format!("/tasks?target=filter&{}", filter_value.join("&")).as_str()).to_request();
-        let res: TaskResponse = test::call_and_read_body_json(&app, req).await;
+        let res: TaskUserResponse = test::call_and_read_body_json(&app, req).await;
 
         assert_eq!(res.rc, 0);
         assert_eq!(res.results.len(), 1);
@@ -286,6 +511,7 @@ mod task_handler_test {
         assert_eq!(res.results[0].deadline, Some(1500));
         assert_eq!(res.results[0].created_at, 3000);
         assert_eq!(res.results[0].updated_at, Some(3000));
+        assert_eq!(res.results[0].users.len(), 2);
     }
 
     #[actix_web::test]
@@ -305,6 +531,38 @@ mod task_handler_test {
         assert_eq!(res.count, 0);
     }
 
+    #[actix_web::test]
+    async fn test_get_tasks_by_invalid_user_ids() {
+        let pool = setup_test_db("task_handler_test", "test_get_tasks_by_invalid_user_ids").await;
+
+        let app = test::init_service(
+            App::new().service(get_tasks).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/tasks?target=filter&level=2&user_ids=ab,cd,_&with_user=true").to_request();
+        let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;    
+
+        assert_eq!(res.rc, 1);
+        assert!(res.message.contains("BadRequest"));
+    }
+
+    #[actix_web::test]
+    async fn test_get_tasks_by_user_ids_not_exists() {
+        let pool = setup_test_db("task_handler_test", "test_get_tasks_by_user_ids_not_exists").await;
+
+        let app = test::init_service(
+            App::new().service(get_tasks).app_data(web::Data::new(pool))
+        ).await;
+
+        let req = test::TestRequest::get().uri("/tasks?target=filter&level=2&user_ids=100,200,300&with_user=true").to_request();
+        let res: TaskResponse = test::call_and_read_body_json(&app, req).await;
+
+        assert_eq!(res.rc, 0);
+        assert_eq!(res.results.len(), 0);
+        assert_eq!(res.message, "OK");
+        assert_eq!(res.count, 0);
+        
+    }
     #[actix_web::test]
     async fn test_create_task() {
         let pool = setup_test_db("task_handler_test", "test_create_task").await;

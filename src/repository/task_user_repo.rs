@@ -5,7 +5,7 @@ use crate::models::repository_model::taskwithuser::TaskWithUser;
 use crate::repository::task_repo::{validate_task_filter, build_task_where_clause, get_tasks_count_with_transaction};
 use crate::errors::db_error::DBAccessError;
 use crate::enums::TaskFilterValue;
-use crate::repository::validations::validate_pagination;
+use crate::repository::validations::{validate_pagination, validate_task_id};
 
 pub struct TaskUserRepository {
     pool: Pool<Sqlite>,
@@ -14,6 +14,20 @@ pub struct TaskUserRepository {
 impl TaskUserRepository {
     pub fn new(pool: Pool<Sqlite>) -> Self {
         Self { pool }
+    }
+
+    fn fix_task_with_user_result(result: Vec<TaskWithUser>) -> Vec<TaskWithUser> {
+        let mut new_tasks = Vec::new();
+        for task in result {
+            if task.users.len() == 1 && task.users[0].user_id.is_none() {
+                let mut new_task = task;
+                new_task.users = sqlx::types::Json(Vec::new());
+                new_tasks.push(new_task);
+            } else {
+                new_tasks.push(task);
+            }
+        }
+        new_tasks
     }
 
     pub async fn get_tasks_and_users_by_filter(
@@ -42,18 +56,27 @@ impl TaskUserRepository {
                     tasks.deadline,
                     tasks.created_at,
                     tasks.updated_at,
-                    COALESCE((
-                        SELECT json_group_array(
-                            json_object(
-                                'user_id', users.user_id,
-                                'username', users.username,
-                                'email', users.email
-                            )
-                        ) FROM users
-                        JOIN user_assign ON users.user_id = user_assign.user_id
-                        WHERE user_assign.task_id = tasks.task_id
-                    ), '[]') AS users
+                    COALESCE(
+                        json_group_array(
+                            CASE
+                                WHEN users.user_id IS NOT NULL THEN
+                                    json_object(
+                                        'user_id', users.user_id,
+                                        'username', users.username,
+                                        'email', users.email
+                                    )
+                                ELSE
+                                    json_object(
+                                        'user_id', NULL,
+                                        'username', '',
+                                        'email', ''
+                                    )
+                            END
+                        ), '[]'
+                    ) AS users
                 FROM tasks
+                LEFT JOIN user_assign ON user_assign.task_id = tasks.task_id
+                LEFT JOIN users ON users.user_id = user_assign.user_id
             "#
         );
 
@@ -97,8 +120,6 @@ impl TaskUserRepository {
             page_bind_values.push(offset as i32);
         }
 
-        println!("query: {}", query);
-
         let mut query_builder = sqlx::query_as::<_, TaskWithUser>(&query);
 
         if !filter_bind_values.is_empty() {
@@ -128,9 +149,96 @@ impl TaskUserRepository {
             e.to_string()
         ))))?;
 
-        log::debug!("Get tasks and users by filter: {:?}", result);
+        for task in result.iter() {
+            println!("taskid: {:?}, users: {:?}", task.task_id, task.users);
+        }
 
-        Ok(result)
+        let fixed_result = Self::fix_task_with_user_result(result);
+
+        for task in fixed_result.iter() {
+            println!("taskid: {:?}, users: {:?}", task.task_id, task.users);
+        }
+
+        log::debug!("Get tasks and users by filter: {:?}", fixed_result);
+
+        Ok(fixed_result)
+    }
+
+    pub async fn get_task_by_id_with_user(
+        &self,
+        id: i64,
+    ) -> Result<TaskWithUser, DBAccessError> {
+        validate_task_id(Some(id))?;
+
+        let mut tx = self.pool.begin().await
+        .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+            ErrorKey::TaskGetByIdFailed,
+            e.to_string()
+        ))))?;
+
+        let query = format!(
+            r#"
+                SELECT
+                    tasks.task_id,
+                    tasks.project_id,
+                    tasks.parent_id,
+                    tasks.level,
+                    tasks.name,
+                    tasks.description,
+                    tasks.status,
+                    tasks.deadline,
+                    tasks.created_at,
+                    tasks.updated_at,
+                    COALESCE(
+                        json_group_array(
+                            CASE
+                                WHEN users.user_id IS NOT NULL THEN
+                                    json_object(
+                                        'user_id', users.user_id,
+                                        'username', users.username,
+                                        'email', users.email
+                                    )
+                                ELSE
+                                    json_object(
+                                        'user_id', NULL,
+                                        'username', '',
+                                        'email', ''
+                                    )
+                            END
+                        ), '[]'
+                    ) AS users
+                FROM tasks
+                LEFT JOIN user_assign ON user_assign.task_id = tasks.task_id
+                LEFT JOIN users ON users.user_id = user_assign.user_id
+                WHERE tasks.task_id = $1
+                GROUP BY tasks.task_id
+            "#
+        );
+
+        let result = sqlx::query_as::<_, TaskWithUser>(&query)
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::TaskGetByIdFailed,
+                e.to_string()
+            ))))?;
+
+        tx.commit().await.map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+            ErrorKey::TaskGetByIdFailed,
+            e.to_string()
+        ))))?;
+
+        match result {
+            Some(result) => {
+                let fixed_result = Self::fix_task_with_user_result(vec![result]);
+                Ok(fixed_result[0].clone())
+            },
+            None => Err(DBAccessError::NotFoundError(get_error_message(
+                ErrorKey::TaskGetByIdNotFound,
+                format!("ID = {}", id)
+            ))),
+        }
     }
 
 }

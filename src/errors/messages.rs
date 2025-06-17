@@ -164,6 +164,7 @@ pub enum ErrorKey {
     TaskHandlerPathAndBodyIdMismatch,
     TaskHandlerInvalidQuery,
     TaskHandlerInvalidPath,
+    TaskHandlerGetUserIdsParseFailed,
 
     // ユーザー割り当てハンドラ関連のエラー
     UserAssignHandlerGetUserAssignsInvalidPage,
@@ -347,6 +348,7 @@ impl fmt::Display for ErrorKey {
             ErrorKey::TaskHandlerPathAndBodyIdMismatch => write!(f, "TaskHandlerPathAndBodyIdMismatch"),
             ErrorKey::TaskHandlerInvalidQuery => write!(f, "TaskHandlerInvalidQuery"),
             ErrorKey::TaskHandlerInvalidPath => write!(f, "TaskHandlerInvalidPath"),
+            ErrorKey::TaskHandlerGetUserIdsParseFailed => write!(f, "TaskHandlerGetUserIdsParseFailed"),
 
             // ユーザー割り当てハンドラ関連のエラー
             ErrorKey::UserAssignHandlerGetUserAssignsInvalidPage => write!(f, "UserAssignHandlerGetUserAssignsInvalidPage"),

@@ -38,4 +38,9 @@ pub fn add_task_handler_error_messages(
     task_handler_invalid_path.insert("en", "Invalid path");
     task_handler_invalid_path.insert("jp", "パスが無効です");
     map.insert(ErrorKey::TaskHandlerInvalidPath, task_handler_invalid_path);
+
+    let mut task_handler_get_user_ids_parse_failed = HashMap::new();
+    task_handler_get_user_ids_parse_failed.insert("en", "Failed to parse user IDs");
+    task_handler_get_user_ids_parse_failed.insert("jp", "ユーザーIDフィルタのパースに失敗しました");
+    map.insert(ErrorKey::TaskHandlerGetUserIdsParseFailed, task_handler_get_user_ids_parse_failed);
 }

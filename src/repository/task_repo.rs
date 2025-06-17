@@ -407,12 +407,15 @@ pub fn build_task_where_clause(filter: &TaskFilter, user_ids: Option<&Vec<i64>>)
         ));
         bind_values.push(TaskFilterValue::I64(filter.updated_at_from.unwrap()));
         bind_values.push(TaskFilterValue::I64(filter.updated_at_to.unwrap()));
+        index += 2;
     } else if filter.updated_at_from.is_some() && filter.updated_at_to.is_none() {
         where_calses.push(format!("tasks.updated_at >= ${}", index));
         bind_values.push(TaskFilterValue::I64(filter.updated_at_from.unwrap()));
+        index += 1;
     } else if filter.updated_at_to.is_some() && filter.updated_at_from.is_none() {
         where_calses.push(format!("tasks.updated_at <= ${}", index));
         bind_values.push(TaskFilterValue::I64(filter.updated_at_to.unwrap()));
+        index += 1;
     }
 
     if user_ids.is_some() {

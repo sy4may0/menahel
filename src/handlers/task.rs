@@ -8,9 +8,12 @@ use crate::models::response_model::PaginationStatus;
 use crate::handlers::utils::get_request_id;
 use crate::models::PaginationParams;
 use crate::models::repository_model::task::{Task, TaskFilter};
+use crate::models::TaskUserResponse;
+use crate::models::TaskWithUser;
 use crate::repository::task_repo::TaskRepository;
 use crate::errors::handler_errors::HandlerError;
 use crate::errors::messages::{get_error_message, ErrorKey};
+use crate::repository::task_user_repo::TaskUserRepository;
 use sqlx::sqlite::SqlitePool;
 use crate::handlers::utils::handle_error;
 
@@ -50,6 +53,8 @@ struct GetTasksQuery {
     updated_at_from: Option<i64>,
     updated_at_to: Option<i64>,
     assignee_id: Option<i64>,
+    with_user: Option<bool>,
+    user_ids: Option<String>,
 }
 
 impl GetTasksQuery {
@@ -102,12 +107,35 @@ impl GetTasksQuery {
             false => Some(filter),
         }
     }
+
+    fn get_user_ids(&self) -> Result<Option<Vec<i64>>, HandlerError> {
+        match self.user_ids.as_ref() {
+            Some(user_ids) => {
+                let user_ids_string: Vec<String> = user_ids.split(",").map(
+                    |id| id.to_string()
+                ).collect();
+                let user_ids: Result<Vec<i64>, HandlerError> = user_ids_string.iter().map(
+                    |id| id.parse::<i64>().map_err(|e| {
+                            HandlerError::BadRequest(get_error_message(
+                                ErrorKey::TaskHandlerGetUserIdsParseFailed, e.to_string()
+                            ))
+                        }
+                    )
+                ).collect();
+                match user_ids {
+                    Ok(ids) => Ok(Some(ids)),
+                    Err(e) => Err(e),
+                }
+            }
+            None => Ok(None),
+        }
+    }
 }
 
 async fn get_tasks_with_pagination (
     pagination_params: &PaginationParams,
     task_filter: Option<&TaskFilter>,
-    pool: SqlitePool
+    pool: SqlitePool,
 ) -> Result<Vec<Task>, HandlerError> {
     let task_repo = TaskRepository::new(pool.clone());
 
@@ -128,11 +156,37 @@ async fn get_tasks_with_pagination (
     }
 }
 
+async fn get_tasks_with_user_pagination(
+    pagination_params: &PaginationParams,
+    task_filter: Option<&TaskFilter>,
+    pool: SqlitePool,
+    user_ids: Option<&Vec<i64>>
+) -> Result<Vec<TaskWithUser>, HandlerError> {
+    let task_user_repo = TaskUserRepository::new(pool.clone());
+
+    match pagination_params.status() {
+        PaginationStatus::Active => {
+            task_user_repo.get_tasks_and_users_by_filter(
+                pagination_params.page(), pagination_params.page_size(), task_filter, user_ids
+            ).await.map_err(HandlerError::from)
+        }
+        PaginationStatus::Inactive => {
+            task_user_repo.get_tasks_and_users_by_filter(
+                None, None, task_filter, user_ids
+            ).await.map_err(HandlerError::from)
+        }
+        PaginationStatus::Error => {
+            Err(HandlerError::BadRequest(get_error_message(ErrorKey::TaskHandlerGetTasksInvalidPage, format!("page: {:?}, page_size: {:?}", pagination_params.page(), pagination_params.page_size()))))
+        }
+    }
+}
+
 // GetTasksQueryにfilterが入っていれば、filterを使ってタスクを取得する
 async fn get_all_or_filtered_tasks(
     req: HttpRequest,
     query: GetTasksQuery,
-    pool: SqlitePool
+    pool: SqlitePool,
+    with_user: &bool
 ) -> HttpResponse {
     let metadata = ResponseMetadata::new(
         get_request_id(&req)
@@ -140,32 +194,109 @@ async fn get_all_or_filtered_tasks(
 
     let mut pagination_params = PaginationParams::new(query.page, query.page_size);
     pagination_params.validate();
-
-    let result = get_tasks_with_pagination(
-        &pagination_params, query.get_task_filter().as_ref(), pool
-    ).await;
-
-    match result {
-        Ok(tasks) => {
-            let len = tasks.len() as i64;
-            let pagination = match pagination_params.status() {
-                PaginationStatus::Active => {
-                    let page_size = pagination_params.page_size().unwrap();
-                    let page = pagination_params.page().unwrap();
-                    Some(Pagination {
-                        current_page: *page,
-                        page_size: *page_size,
-                    })
-                }
-                _ => None,
-            };
-            let response = TaskResponse::new(tasks, len, pagination, Some(metadata));
-            log::debug!("Response: {:?}", response);
-            return HttpResponse::Ok().json(response);
+    let pagination = match pagination_params.status() {
+        PaginationStatus::Active => {
+            let page_size = pagination_params.page_size().unwrap();
+            let page = pagination_params.page().unwrap();
+            Some(Pagination {
+                current_page: *page,
+                page_size: *page_size,
+            })
         }
+        _ => None,
+    };
+
+    let user_ids = match query.get_user_ids() {
+        Ok(ids) => ids,
         Err(e) => {
             let response = ErrorResponse::new(e.to_string(), 1, Some(metadata));
             return handle_error(e, response);
+        }
+    };
+
+    if !*with_user {
+        let result = get_tasks_with_pagination(
+            &pagination_params, query.get_task_filter().as_ref(), pool
+        ).await;
+
+        match result {
+            Ok(tasks) => {
+                let len = tasks.len() as i64;
+                let response = TaskResponse::new(
+                    tasks, len, pagination, Some(metadata));
+                log::debug!("Response: {:?}", response);
+                return HttpResponse::Ok().json(response);
+            }
+            Err(e) => {
+                let response = ErrorResponse::new(
+                    e.to_string(), 1, Some(metadata));
+                return handle_error(e, response);
+            }
+        }
+    } else {
+        let result = get_tasks_with_user_pagination(
+            &pagination_params, query.get_task_filter().as_ref(), pool, user_ids.as_ref()
+        ).await;
+
+        match result {
+            Ok(tasks) => {
+                let len = tasks.len() as i64;
+                let response = TaskUserResponse::new(
+                    tasks, len, pagination, Some(metadata));
+                log::debug!("Response: {:?}", response);
+                return HttpResponse::Ok().json(response);
+            }
+            Err(e) => {
+                let response = ErrorResponse::new(
+                    e.to_string(), 1, Some(metadata));
+                return handle_error(e, response);
+            }
+        }
+    }
+}
+
+async fn get_task_or_task_with_user(
+    id: i64,
+    pool: SqlitePool,
+    with_user: &bool,
+    metadata: ResponseMetadata
+) -> HttpResponse {
+    match !*with_user {
+        true => {
+            let task_repo = TaskRepository::new(pool.clone());
+            let task = task_repo.get_task_by_id(
+                id
+            ).await.map_err(HandlerError::from);
+
+            match task {
+                Ok(task) => {
+                    let response = TaskResponse::new(vec![task], 1, None, Some(metadata));
+                    log::debug!("Response: {:?}", response);
+                    return HttpResponse::Ok().json(response);
+                }
+                Err(e) => {
+                    let response = ErrorResponse::new(e.to_string(), 1, Some(metadata));
+                    return handle_error(e, response);
+                }
+            }
+        },
+        false => {
+            let task_user_repo = TaskUserRepository::new(pool.clone());
+            let task = task_user_repo.get_task_by_id_with_user(
+                id
+            ).await.map_err(HandlerError::from);
+
+            match task {
+                Ok(task) => {
+                    let response = TaskUserResponse::new(vec![task], 1, None, Some(metadata));
+                    log::debug!("Response: {:?}", response);
+                    return HttpResponse::Ok().json(response);
+                }
+                Err(e) => {
+                    let response = ErrorResponse::new(e.to_string(), 1, Some(metadata));
+                    return handle_error(e, response);
+                }
+            }
         }
     }
 }
@@ -173,7 +304,8 @@ async fn get_all_or_filtered_tasks(
 async fn get_task_by_id (
     req: HttpRequest,
     query: GetTasksQuery,
-    pool: SqlitePool
+    pool: SqlitePool,
+    with_user: &bool
 ) -> HttpResponse {
     let metadata = ResponseMetadata::new(
         get_request_id(&req)
@@ -187,22 +319,12 @@ async fn get_task_by_id (
         }
     };
 
-    let task_repo = TaskRepository::new(pool.clone());
-    let task = task_repo.get_task_by_id(
-        validated_query.id.clone().unwrap()
-    ).await.map_err(HandlerError::from);
-
-    match task {
-        Ok(task) => {
-            let response = TaskResponse::new(vec![task], 1, None, Some(metadata));
-            log::debug!("Response: {:?}", response);
-            return HttpResponse::Ok().json(response);
-        }
-        Err(e) => {
-            let response = ErrorResponse::new(e.to_string(), 1, Some(metadata));
-            return handle_error(e, response);
-        }
-    }
+    get_task_or_task_with_user(
+        validated_query.id.clone().unwrap(),
+        pool.clone(),
+        &with_user,
+        metadata
+    ).await
 }
 
 #[get("/tasks")]
@@ -231,10 +353,12 @@ pub async fn get_tasks(
         }
     };
 
+    let with_user = query.with_user.unwrap_or(false);
+
     match target {
-        QueryTarget::All => get_all_or_filtered_tasks(req, query, pool.get_ref().clone()).await,
-        QueryTarget::Id => get_task_by_id(req, query, pool.get_ref().clone()).await,
-        QueryTarget::Filter => get_all_or_filtered_tasks(req, query, pool.get_ref().clone()).await,
+        QueryTarget::All => get_all_or_filtered_tasks(req, query, pool.get_ref().clone(), &with_user).await,
+        QueryTarget::Id => get_task_by_id(req, query, pool.get_ref().clone(), &with_user).await,
+        QueryTarget::Filter => get_all_or_filtered_tasks(req, query, pool.get_ref().clone(), &with_user).await,
     }
 }
 
