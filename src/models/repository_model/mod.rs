@@ -17,3 +17,4 @@ pub use taskwithuser::FixedTaskWithUser;
 pub use taskwithuser::FixedUserWithTask;
 pub use user::UserNoPassword;
 pub use taskwithuser::TaskWithUser;
+pub use comment::CommentWithUser;
