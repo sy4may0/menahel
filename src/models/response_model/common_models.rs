@@ -9,7 +9,11 @@ pub struct RootResponse {
 
 impl RootResponse {
     pub fn new(message: String, rc: i32, metadata: Option<ResponseMetadata>) -> Self {
-        Self { message, rc, metadata }
+        Self {
+            message,
+            rc,
+            metadata,
+        }
     }
 }
 
@@ -22,7 +26,11 @@ pub struct ErrorResponse {
 
 impl ErrorResponse {
     pub fn new(message: String, rc: i32, metadata: Option<ResponseMetadata>) -> Self {
-        Self { message, rc, metadata }
+        Self {
+            message,
+            rc,
+            metadata,
+        }
     }
 }
 
@@ -40,7 +48,10 @@ pub struct ResponseMetadata {
 
 impl ResponseMetadata {
     pub fn new(request_id: String) -> Self {
-        Self { request_id, api_version: env!("CARGO_PKG_VERSION").to_string() }
+        Self {
+            request_id,
+            api_version: env!("CARGO_PKG_VERSION").to_string(),
+        }
     }
 }
 
@@ -60,13 +71,16 @@ pub struct PaginationParams {
 
 impl PaginationParams {
     pub fn new(page: Option<i32>, page_size: Option<i32>) -> Self {
-        Self { page, page_size, status: PaginationStatus::Inactive }
+        Self {
+            page,
+            page_size,
+            status: PaginationStatus::Error,
+        }
     }
 
     pub fn validate(&mut self) {
         if self.page.is_none() && self.page_size.is_none() {
             self.status = PaginationStatus::Inactive;
-
         } else if self.page.is_some() && self.page_size.is_some() {
             if self.page.unwrap() <= 0 {
                 self.status = PaginationStatus::Error;
@@ -75,7 +89,6 @@ impl PaginationParams {
             } else {
                 self.status = PaginationStatus::Active;
             }
-
         } else {
             self.status = PaginationStatus::Error;
         }

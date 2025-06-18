@@ -1,5 +1,9 @@
 use crate::models::Comment;
-use crate::repository::comment_repo::{CommentRepository, get_comment_by_id_with_transaction};
+use crate::repository::comment_repo::{
+    CommentRepository, get_comment_by_id_with_transaction,
+    get_comment_count_by_task_id_with_transaction, get_comment_count_by_user_id_with_transaction,
+    get_comment_count_with_transaction,
+};
 use sqlx::sqlite::SqlitePool;
 
 #[cfg(test)]
@@ -102,7 +106,7 @@ mod comment_repo_test {
     async fn test_comment_repo_get_comment_by_id(pool: SqlitePool) {
         let comment_repo = CommentRepository::new(pool);
 
-        let comment = comment_repo.get_comment_by_id(1).await.unwrap().unwrap();
+        let comment = comment_repo.get_comment_by_id(1).await.unwrap();
         assert_eq!(comment.user_id, 1);
         assert_eq!(comment.task_id, 3);
         assert_eq!(comment.content, "Test Comment 0");
@@ -113,8 +117,8 @@ mod comment_repo_test {
     async fn test_comment_repo_get_comment_by_id_not_found(pool: SqlitePool) {
         let comment_repo = CommentRepository::new(pool);
 
-        let comment = comment_repo.get_comment_by_id(100).await.unwrap();
-        assert!(comment.is_none());
+        let result = comment_repo.get_comment_by_id(100).await;
+        assert!(result.is_err());
     }
 
     #[sqlx::test(fixtures("comments"))]
@@ -122,7 +126,7 @@ mod comment_repo_test {
         let comment_repo = CommentRepository::new(pool);
 
         let comments = comment_repo.get_comment_by_task_id(3).await.unwrap();
-        assert_eq!(comments.len(), 1);
+        assert_eq!(comments.len(), 4);
         assert_eq!(comments[0].user_id, 1);
         assert_eq!(comments[0].task_id, 3);
         assert_eq!(comments[0].content, "Test Comment 0");
@@ -142,7 +146,7 @@ mod comment_repo_test {
         let comment_repo = CommentRepository::new(pool);
 
         let comments = comment_repo.get_comment_by_user_id(1).await.unwrap();
-        assert_eq!(comments.len(), 3);
+        assert_eq!(comments.len(), 6);
         for comment in comments {
             assert_eq!(comment.user_id, 1);
             assert_eq!(comment.user.user_id, Some(1));
@@ -346,5 +350,190 @@ mod comment_repo_test {
         assert!(comment.is_none());
 
         tx.commit().await.unwrap();
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comment_count_with_transaction(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+        let count = get_comment_count_with_transaction(&mut tx).await.unwrap();
+        assert_eq!(count, 12);
+        tx.commit().await.unwrap();
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comment_count_by_task_id_with_transaction(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+        let count = get_comment_count_by_task_id_with_transaction(3, &mut tx)
+            .await
+            .unwrap();
+        assert_eq!(count, 4);
+        tx.commit().await.unwrap();
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comment_count_by_user_id_with_transaction(pool: SqlitePool) {
+        let mut tx = pool.begin().await.unwrap();
+        let count = get_comment_count_by_user_id_with_transaction(1, &mut tx)
+            .await
+            .unwrap();
+        assert_eq!(count, 6);
+        tx.commit().await.unwrap();
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comments_with_pagination(pool: SqlitePool) {
+        let comment_repo = CommentRepository::new(pool);
+
+        let comments = comment_repo
+            .get_comments_with_pagination(&1, &10)
+            .await
+            .unwrap();
+        assert_eq!(comments.len(), 10);
+
+        let comments = comment_repo
+            .get_comments_with_pagination(&2, &10)
+            .await
+            .unwrap();
+        assert_eq!(comments.len(), 2);
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comments_with_pagination_not_found(pool: SqlitePool) {
+        let comment_repo = CommentRepository::new(pool);
+
+        let comments = comment_repo.get_comments_with_pagination(&3, &10).await;
+        assert!(comments.is_err());
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comments_with_pagination_invalid_page(pool: SqlitePool) {
+        let comment_repo = CommentRepository::new(pool);
+
+        let comments = comment_repo.get_comments_with_pagination(&0, &2).await;
+        assert!(comments.is_err());
+
+        let comments = comment_repo.get_comments_with_pagination(&1, &0).await;
+        assert!(comments.is_err());
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comments_with_pagination_by_task_id(pool: SqlitePool) {
+        let comment_repo = CommentRepository::new(pool);
+
+        let comments = comment_repo
+            .get_comments_with_pagination_by_task_id(3, &1, &3)
+            .await
+            .unwrap();
+        assert_eq!(comments.len(), 3);
+
+        let comments = comment_repo
+            .get_comments_with_pagination_by_task_id(3, &2, &3)
+            .await
+            .unwrap();
+        assert_eq!(comments.len(), 1);
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comments_with_pagination_by_task_id_id_not_found(
+        pool: SqlitePool,
+    ) {
+        let comment_repo = CommentRepository::new(pool);
+
+        let comments = comment_repo
+            .get_comments_with_pagination_by_task_id(100, &1, &3)
+            .await
+            .unwrap();
+        assert_eq!(comments.len(), 0);
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comments_with_pagination_by_task_id_not_found(pool: SqlitePool) {
+        let comment_repo = CommentRepository::new(pool);
+
+        let comments = comment_repo
+            .get_comments_with_pagination_by_task_id(11, &10, &10)
+            .await;
+        assert!(comments.is_err());
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comments_with_pagination_by_task_id_invalid_page(
+        pool: SqlitePool,
+    ) {
+        let comment_repo = CommentRepository::new(pool);
+
+        let comments = comment_repo
+            .get_comments_with_pagination_by_task_id(11, &0, &3)
+            .await;
+        assert!(comments.is_err());
+
+        let comments = comment_repo
+            .get_comments_with_pagination_by_task_id(11, &1, &0)
+            .await;
+        assert!(comments.is_err());
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comments_with_pagination_by_user_id(pool: SqlitePool) {
+        let comment_repo = CommentRepository::new(pool);
+
+        let comments = comment_repo
+            .get_comments_with_pagination_by_user_id(1, &1, &4)
+            .await
+            .unwrap();
+        assert_eq!(comments.len(), 4);
+
+        let comments = comment_repo
+            .get_comments_with_pagination_by_user_id(1, &2, &4)
+            .await
+            .unwrap();
+        assert_eq!(comments.len(), 2);
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comments_with_pagination_by_user_id_id_not_found(
+        pool: SqlitePool,
+    ) {
+        let comment_repo = CommentRepository::new(pool);
+
+        let comments = comment_repo
+            .get_comments_with_pagination_by_user_id(100, &1, &3)
+            .await
+            .unwrap();
+        assert_eq!(comments.len(), 0);
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comments_with_pagination_by_user_id_not_found(pool: SqlitePool) {
+        let comment_repo = CommentRepository::new(pool);
+
+        let comments = comment_repo
+            .get_comments_with_pagination_by_user_id(11, &10, &10)
+            .await;
+        assert!(comments.is_err());
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_comments_with_pagination_by_user_id_invalid_page(
+        pool: SqlitePool,
+    ) {
+        let comment_repo = CommentRepository::new(pool);
+
+        let comments = comment_repo
+            .get_comments_with_pagination_by_user_id(11, &0, &3)
+            .await;
+        assert!(comments.is_err());
+
+        let comments = comment_repo
+            .get_comments_with_pagination_by_user_id(11, &1, &0)
+            .await;
+        assert!(comments.is_err());
+    }
+
+    #[sqlx::test(fixtures("comments"))]
+    async fn test_comment_repo_get_all_comments(pool: SqlitePool) {
+        let comment_repo = CommentRepository::new(pool);
+        let comments = comment_repo.get_all_comments().await.unwrap();
+        assert_eq!(comments.len(), 12);
     }
 }

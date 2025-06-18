@@ -1,7 +1,7 @@
-use actix_web::{get, Responder, web, HttpRequest};
-use crate::models::response_model::{RootResponse, ResponseMetadata};
 use crate::constants::API_VERSION;
 use crate::handlers::utils::get_request_id;
+use crate::models::response_model::{ResponseMetadata, RootResponse};
+use actix_web::{HttpRequest, Responder, get, web};
 
 #[get("/")]
 async fn root(req: HttpRequest) -> impl Responder {
@@ -12,9 +12,7 @@ async fn root(req: HttpRequest) -> impl Responder {
         api_version: API_VERSION.to_string(),
     };
 
-    let response = RootResponse::new(
-        "I AM MENAHEL!".to_string(), 0, Some(metadata)
-    );
+    let response = RootResponse::new("I AM MENAHEL!".to_string(), 0, Some(metadata));
     web::Json(response)
         .customize()
         .append_header(("X-Request-ID", request_id))
@@ -28,9 +26,7 @@ async fn health(req: HttpRequest) -> impl Responder {
         request_id: request_id.clone(),
         api_version: API_VERSION.to_string(),
     };
-    let response = RootResponse::new(
-        "MENAHEL IS RUNNING!".to_string(), 0, Some(metadata)
-    );
+    let response = RootResponse::new("MENAHEL IS RUNNING!".to_string(), 0, Some(metadata));
     web::Json(response)
         .customize()
         .append_header(("X-Request-ID", request_id))

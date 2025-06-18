@@ -1,18 +1,18 @@
-use serde::Deserialize;
-use crate::errors::messages::ErrorKey;
 use crate::errors::handler_errors::HandlerError;
+use crate::errors::messages::ErrorKey;
 use crate::errors::messages::get_error_message;
-use crate::models::project::Project;
-use crate::models::response_model::Pagination;
-use crate::models::response_model::PaginationStatus;
-use crate::models::PaginationParams;
-use crate::repository::project_repo::ProjectRepository;
-use crate::models::response_model::ResponseMetadata;
-use crate::models::response_model::ProjectResponse;
-use crate::models::response_model::ErrorResponse;
 use crate::handlers::utils::get_request_id;
 use crate::handlers::utils::handle_error;
-use actix_web::{web, HttpResponse, HttpRequest, Responder, get, post, delete};
+use crate::models::PaginationParams;
+use crate::models::project::Project;
+use crate::models::response_model::ErrorResponse;
+use crate::models::response_model::Pagination;
+use crate::models::response_model::PaginationStatus;
+use crate::models::response_model::ProjectResponse;
+use crate::models::response_model::ResponseMetadata;
+use crate::repository::project_repo::ProjectRepository;
+use actix_web::{HttpRequest, HttpResponse, Responder, delete, get, post, web};
+use serde::Deserialize;
 use sqlx::sqlite::SqlitePool;
 
 enum QueryTarget {
@@ -27,9 +27,9 @@ impl QueryTarget {
             "all" => Ok(QueryTarget::All),
             "name" => Ok(QueryTarget::Name),
             "id" => Ok(QueryTarget::Id),
-            _ => Err(HandlerError::BadRequest(
-                get_error_message(ErrorKey::ProjectHandlerGetProjectsInvalidTarget,
-                format!("target: {}", s)
+            _ => Err(HandlerError::BadRequest(get_error_message(
+                ErrorKey::ProjectHandlerGetProjectsInvalidTarget,
+                format!("target: {}", s),
             ))),
         }
     }
@@ -61,18 +61,18 @@ impl GetProjectsQuery {
             QueryTarget::All => Ok(()),
             QueryTarget::Name => {
                 if self.name.is_none() {
-                    return Err(HandlerError::BadRequest(
-                        get_error_message(ErrorKey::ProjectHandlerGetProjectsNoNameSpecified,
-                            "".to_string()
+                    return Err(HandlerError::BadRequest(get_error_message(
+                        ErrorKey::ProjectHandlerGetProjectsNoNameSpecified,
+                        "".to_string(),
                     )));
                 }
                 Ok(())
             }
             QueryTarget::Id => {
                 if self.id.is_none() {
-                    return Err(HandlerError::BadRequest(
-                        get_error_message(ErrorKey::ProjectHandlerGetProjectsNoIdSpecified,
-                            "".to_string()
+                    return Err(HandlerError::BadRequest(get_error_message(
+                        ErrorKey::ProjectHandlerGetProjectsNoIdSpecified,
+                        "".to_string(),
                     )));
                 }
                 Ok(())
@@ -83,45 +83,54 @@ impl GetProjectsQuery {
 
 async fn get_projects_with_pagination(
     pagination_params: &PaginationParams,
-    pool: SqlitePool
+    pool: SqlitePool,
 ) -> Result<Vec<Project>, HandlerError> {
     let project_repo = ProjectRepository::new(pool);
 
     match pagination_params.status() {
         PaginationStatus::Active => {
-            log::debug!("Getting projects with pagination: page: {:?}, page_size: {:?}", pagination_params.page(), pagination_params.page_size());
-            project_repo.get_projects_with_pagination(
-                pagination_params.page().unwrap(), pagination_params.page_size().unwrap()
-            ).await.map_err(HandlerError::from)
+            log::debug!(
+                "Getting projects with pagination: page: {:?}, page_size: {:?}",
+                pagination_params.page(),
+                pagination_params.page_size()
+            );
+            project_repo
+                .get_projects_with_pagination(
+                    pagination_params.page().unwrap(),
+                    pagination_params.page_size().unwrap(),
+                )
+                .await
+                .map_err(HandlerError::from)
         }
         PaginationStatus::Inactive => {
             log::debug!("Getting all projects");
-            project_repo.get_all_projects().await.map_err(HandlerError::from)
+            project_repo
+                .get_all_projects()
+                .await
+                .map_err(HandlerError::from)
         }
-        PaginationStatus::Error => {
-            Err(HandlerError::BadRequest(
-                get_error_message(ErrorKey::ProjectHandlerGetProjectsInvalidPage,
-                    format!("page: {:?}, page_size: {:?}", pagination_params.page(), pagination_params.page_size())
-            )))
-        }
+        PaginationStatus::Error => Err(HandlerError::BadRequest(get_error_message(
+            ErrorKey::ProjectHandlerGetProjectsInvalidPage,
+            format!(
+                "page: {:?}, page_size: {:?}",
+                pagination_params.page(),
+                pagination_params.page_size()
+            ),
+        ))),
     }
 }
 
 async fn get_all_projects(
-    req: HttpRequest, query: GetProjectsQuery, pool: SqlitePool
+    req: HttpRequest,
+    query: GetProjectsQuery,
+    pool: SqlitePool,
 ) -> HttpResponse {
-    let metadata = ResponseMetadata::new(
-        get_request_id(&req),
-    );
+    let metadata = ResponseMetadata::new(get_request_id(&req));
 
-    let mut pagination_params = PaginationParams::new(
-        query.page, query.page_size
-    );
+    let mut pagination_params = PaginationParams::new(query.page, query.page_size);
     pagination_params.validate();
 
-    let result = get_projects_with_pagination(
-        &pagination_params, pool
-    ).await;
+    let result = get_projects_with_pagination(&pagination_params, pool).await;
 
     match result {
         Ok(projects) => {
@@ -149,11 +158,11 @@ async fn get_all_projects(
 }
 
 async fn get_project_by_name(
-    req: HttpRequest, query: GetProjectsQuery, pool: SqlitePool
+    req: HttpRequest,
+    query: GetProjectsQuery,
+    pool: SqlitePool,
 ) -> HttpResponse {
-    let metadata = ResponseMetadata::new(
-        get_request_id(&req),
-    );
+    let metadata = ResponseMetadata::new(get_request_id(&req));
 
     let validated_query = match query.validate() {
         Ok(()) => query,
@@ -164,9 +173,10 @@ async fn get_project_by_name(
     };
 
     let project_repo = ProjectRepository::new(pool);
-    let project = project_repo.get_project_by_name(
-        validated_query.name.clone().unwrap().as_str()
-    ).await.map_err(HandlerError::from);
+    let project = project_repo
+        .get_project_by_name(validated_query.name.clone().unwrap().as_str())
+        .await
+        .map_err(HandlerError::from);
 
     match project {
         Ok(project) => {
@@ -182,11 +192,11 @@ async fn get_project_by_name(
 }
 
 async fn get_project_by_id(
-    req: HttpRequest, query: GetProjectsQuery, pool: SqlitePool
+    req: HttpRequest,
+    query: GetProjectsQuery,
+    pool: SqlitePool,
 ) -> HttpResponse {
-    let metadata = ResponseMetadata::new(
-        get_request_id(&req),
-    );
+    let metadata = ResponseMetadata::new(get_request_id(&req));
 
     let validated_query = match query.validate() {
         Ok(()) => query,
@@ -196,10 +206,23 @@ async fn get_project_by_id(
         }
     };
 
+    let id = match validated_query.target() {
+        Ok(QueryTarget::Id) => validated_query.id.unwrap(),
+        _ => {
+            let e = HandlerError::BadRequest(get_error_message(
+                ErrorKey::ProjectHandlerGetProjectsInvalidTarget,
+                "".to_string(),
+            ));
+            let response = ErrorResponse::new(e.to_string(), 1, Some(metadata));
+            return handle_error(e, response);
+        }
+    };
+
     let project_repo = ProjectRepository::new(pool);
-    let project = project_repo.get_project_by_id(
-        validated_query.id.clone().unwrap()
-    ).await.map_err(HandlerError::from);
+    let project = project_repo
+        .get_project_by_id(id)
+        .await
+        .map_err(HandlerError::from);
 
     match project {
         Ok(project) => {
@@ -216,16 +239,17 @@ async fn get_project_by_id(
 
 #[get("/projects")]
 pub async fn get_projects(
-    req: HttpRequest, 
+    req: HttpRequest,
     query: Result<web::Query<GetProjectsQuery>, actix_web::Error>,
-    pool: web::Data<SqlitePool>
+    pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let query = match query {
         Ok(query) => query.into_inner(),
         Err(e) => {
-            let error = HandlerError::BadRequest(
-                get_error_message(ErrorKey::ProjectHandlerInvalidQuery, format!("ActixWebError: {}", e))
-            );
+            let error = HandlerError::BadRequest(get_error_message(
+                ErrorKey::ProjectHandlerInvalidQuery,
+                format!("ActixWebError: {}", e),
+            ));
             let response = ErrorResponse::new(error.to_string(), 1, None);
             return handle_error(error, response);
         }
@@ -248,27 +272,29 @@ pub async fn get_projects(
 
 #[post("/projects")]
 pub async fn create_project(
-    req: HttpRequest, project_data: Result<web::Json<Project>, actix_web::Error>, pool: web::Data<SqlitePool>
+    req: HttpRequest,
+    project_data: Result<web::Json<Project>, actix_web::Error>,
+    pool: web::Data<SqlitePool>,
 ) -> impl Responder {
-    let metadata = ResponseMetadata::new(
-        get_request_id(&req),
-    );
+    let metadata = ResponseMetadata::new(get_request_id(&req));
 
     let project_data = match project_data {
         Ok(data) => data,
         Err(e) => {
-            let error = HandlerError::BadRequest(
-                get_error_message(ErrorKey::ProjectHandlerInvalidJsonPost, format!("ActixWebError: {}", e))
-            );
+            let error = HandlerError::BadRequest(get_error_message(
+                ErrorKey::ProjectHandlerInvalidJsonPost,
+                format!("ActixWebError: {}", e),
+            ));
             let response = ErrorResponse::new(error.to_string(), 1, Some(metadata));
             return handle_error(error, response);
         }
     };
 
     let project_repo = ProjectRepository::new(pool.get_ref().clone());
-    let project = project_repo.create_project(
-        project_data.into_inner()
-    ).await.map_err(HandlerError::from);
+    let project = project_repo
+        .create_project(project_data.into_inner())
+        .await
+        .map_err(HandlerError::from);
 
     match project {
         Ok(project) => {
@@ -284,21 +310,20 @@ pub async fn create_project(
 
 #[post("/projects/{id}")]
 pub async fn update_project(
-    req: HttpRequest, 
-    project_data: Result<web::Json<Project>, actix_web::Error>, 
+    req: HttpRequest,
+    project_data: Result<web::Json<Project>, actix_web::Error>,
     path: Result<web::Path<i64>, actix_web::Error>,
-    pool: web::Data<SqlitePool>
+    pool: web::Data<SqlitePool>,
 ) -> HttpResponse {
-    let metadata = ResponseMetadata::new(
-        get_request_id(&req),
-    );
+    let metadata = ResponseMetadata::new(get_request_id(&req));
 
     let path = match path {
         Ok(path) => path.into_inner(),
         Err(e) => {
-            let error = HandlerError::BadRequest(
-                get_error_message(ErrorKey::ProjectHandlerInvalidPath, format!("ActixWebError: {}", e))
-            );
+            let error = HandlerError::BadRequest(get_error_message(
+                ErrorKey::ProjectHandlerInvalidPath,
+                format!("ActixWebError: {}", e),
+            ));
             let response = ErrorResponse::new(error.to_string(), 1, Some(metadata));
             return handle_error(error, response);
         }
@@ -307,27 +332,34 @@ pub async fn update_project(
     let project_data = match project_data {
         Ok(data) => data,
         Err(e) => {
-            let error = HandlerError::BadRequest(
-                get_error_message(ErrorKey::ProjectHandlerInvalidJsonPost, format!("ActixWebError: {}", e))
-            );
+            let error = HandlerError::BadRequest(get_error_message(
+                ErrorKey::ProjectHandlerInvalidJsonPost,
+                format!("ActixWebError: {}", e),
+            ));
             let response = ErrorResponse::new(error.to_string(), 1, Some(metadata));
             return handle_error(error, response);
         }
     };
 
-    if project_data.project_id.is_none() || (project_data.project_id.is_some() && project_data.project_id.unwrap() != path) {
-        let error = HandlerError::BadRequest(
-            get_error_message(ErrorKey::ProjectHandlerPathAndBodyIdMismatch, 
-            format!("path_id: {:?}, body_id: {:?}", path, project_data.project_id))
-        );
+    if project_data.project_id.is_none()
+        || (project_data.project_id.is_some() && project_data.project_id.unwrap() != path)
+    {
+        let error = HandlerError::BadRequest(get_error_message(
+            ErrorKey::ProjectHandlerPathAndBodyIdMismatch,
+            format!(
+                "path_id: {:?}, body_id: {:?}",
+                path, project_data.project_id
+            ),
+        ));
         let response = ErrorResponse::new(error.to_string(), 1, Some(metadata));
         return handle_error(error, response);
     }
 
     let project_repo = ProjectRepository::new(pool.get_ref().clone());
-    let project = project_repo.update_project(
-       project_data.into_inner()
-    ).await.map_err(HandlerError::from);
+    let project = project_repo
+        .update_project(project_data.into_inner())
+        .await
+        .map_err(HandlerError::from);
 
     match project {
         Ok(project) => {
@@ -339,31 +371,33 @@ pub async fn update_project(
             return handle_error(e, response);
         }
     }
-} 
+}
 
 #[delete("/projects/{id}")]
 pub async fn delete_project(
-    req: HttpRequest, 
+    req: HttpRequest,
     path: Result<web::Path<i64>, actix_web::Error>,
-    pool: web::Data<SqlitePool>
+    pool: web::Data<SqlitePool>,
 ) -> HttpResponse {
-    let metadata = ResponseMetadata::new(
-        get_request_id(&req),
-    );
+    let metadata = ResponseMetadata::new(get_request_id(&req));
 
     let path = match path {
         Ok(path) => path.into_inner(),
         Err(e) => {
-            let error = HandlerError::BadRequest(
-                get_error_message(ErrorKey::ProjectHandlerInvalidPath, format!("ActixWebError: {}", e))
-            );
+            let error = HandlerError::BadRequest(get_error_message(
+                ErrorKey::ProjectHandlerInvalidPath,
+                format!("ActixWebError: {}", e),
+            ));
             let response = ErrorResponse::new(error.to_string(), 1, Some(metadata));
             return handle_error(error, response);
         }
     };
 
     let project_repo = ProjectRepository::new(pool.get_ref().clone());
-    let project = project_repo.delete_project(path).await.map_err(HandlerError::from);
+    let project = project_repo
+        .delete_project(path)
+        .await
+        .map_err(HandlerError::from);
 
     match project {
         Ok(()) => {

@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod user_handler_test {
-    use crate::handlers::user::{get_users, create_user, update_user, delete_user};
-    use actix_web::{test, App, web};
-    use crate::models::{User, UserResponse};
-    use crate::models::ErrorResponse;
     use crate::errors::messages::ErrorKey;
-    use crate::init_logger;
     use crate::handlers::test::utils::setup_test_db;
+    use crate::handlers::user::{create_user, delete_user, get_users, update_user};
+    use crate::init_logger;
+    use crate::models::ErrorResponse;
+    use crate::models::{User, UserResponse};
+    use actix_web::{App, test, web};
 
     #[ctor::ctor]
     fn init() {
@@ -31,14 +31,13 @@ mod user_handler_test {
     async fn test_get_users() {
         let pool = setup_test_db("user_handler_test", "test_get_users").await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
         let req = test::TestRequest::get().uri("/users").to_request();
-        
+
         let res: UserResponse = test::call_and_read_body_json(&app, req).await;
-        
+
         assert_eq!(res.rc, 0);
         assert_eq!(res.message, "OK");
         assert_eq!(res.results.len(), 10);
@@ -49,11 +48,12 @@ mod user_handler_test {
     async fn test_get_users_with_pagination() {
         let pool = setup_test_db("user_handler_test", "test_get_users_with_pagination").await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
-        let req = test::TestRequest::get().uri("/users?page=1&page_size=4").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?page=1&page_size=4")
+            .to_request();
         let res: UserResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 0);
         assert_eq!(res.message, "OK");
@@ -71,7 +71,9 @@ mod user_handler_test {
         assert_eq!(res.results[2].user_id, Some(2));
         assert_eq!(res.results[3].user_id, Some(3));
 
-        let req = test::TestRequest::get().uri("/users?page=2&page_size=4").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?page=2&page_size=4")
+            .to_request();
         let res: UserResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 0);
         assert_eq!(res.message, "OK");
@@ -86,7 +88,9 @@ mod user_handler_test {
         assert_eq!(res.results[2].user_id, Some(6));
         assert_eq!(res.results[3].user_id, Some(7));
 
-        let req = test::TestRequest::get().uri("/users?page=3&page_size=4").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?page=3&page_size=4")
+            .to_request();
         let res: UserResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 0);
         assert_eq!(res.message, "OK");
@@ -102,42 +106,64 @@ mod user_handler_test {
 
     #[actix_web::test]
     async fn test_get_users_with_pagination_invalid_page() {
-        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagination_invalid_page").await;
+        let pool = setup_test_db(
+            "user_handler_test",
+            "test_get_users_with_pagination_invalid_page",
+        )
+        .await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
-        let req = test::TestRequest::get().uri("/users?page=0&page_size=4").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?page=0&page_size=4")
+            .to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
-        assert!(res.message.contains(ErrorKey::UserHandlerGetUsersInvalidPage.to_string().as_str()));
+        assert!(
+            res.message.contains(
+                ErrorKey::UserHandlerGetUsersInvalidPage
+                    .to_string()
+                    .as_str()
+            )
+        );
     }
 
     #[actix_web::test]
     async fn test_get_users_with_pagination_over_page_size() {
-        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagination_over_page_size").await;
+        let pool = setup_test_db(
+            "user_handler_test",
+            "test_get_users_with_pagination_over_page_size",
+        )
+        .await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
-        let req = test::TestRequest::get().uri("/users?page=1&page_size=1000").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?page=1&page_size=1000")
+            .to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
-        assert!(res.message.contains(ErrorKey::UserHandlerGetUsersInvalidPage.to_string().as_str()));
-        
+        assert!(
+            res.message.contains(
+                ErrorKey::UserHandlerGetUsersInvalidPage
+                    .to_string()
+                    .as_str()
+            )
+        );
     }
 
     #[actix_web::test]
     async fn test_get_users_by_name() {
         let pool = setup_test_db("user_handler_test", "test_get_users_by_name").await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
-        let req = test::TestRequest::get().uri("/users?target=name&name=testuser0").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?target=name&name=testuser0")
+            .to_request();
         let res: UserResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 0);
         assert_eq!(res.message, "OK");
@@ -150,11 +176,12 @@ mod user_handler_test {
     async fn test_get_users_by_id() {
         let pool = setup_test_db("user_handler_test", "test_get_users_by_id").await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
-        let req = test::TestRequest::get().uri("/users?target=id&id=0").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?target=id&id=0")
+            .to_request();
         let res: UserResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 0);
         assert_eq!(res.message, "OK");
@@ -167,11 +194,12 @@ mod user_handler_test {
     async fn test_get_users_by_id_invalid_target() {
         let pool = setup_test_db("user_handler_test", "test_get_users_by_id_invalid_target").await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
-        let req = test::TestRequest::get().uri("/users?target=invalid&id=0").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?target=invalid&id=0")
+            .to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
         assert!(res.message.contains("BadRequest"));
@@ -181,11 +209,12 @@ mod user_handler_test {
     async fn test_get_users_by_id_no_id() {
         let pool = setup_test_db("user_handler_test", "test_get_users_by_id_no_id").await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
-        let req = test::TestRequest::get().uri("/users?target=id").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?target=id")
+            .to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
         assert!(res.message.contains("BadRequest"));
@@ -195,11 +224,12 @@ mod user_handler_test {
     async fn test_get_users_by_name_no_name() {
         let pool = setup_test_db("user_handler_test", "test_get_users_by_name_no_name").await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
-        let req = test::TestRequest::get().uri("/users?target=name").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?target=name")
+            .to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
         assert!(res.message.contains("BadRequest"));
@@ -209,11 +239,12 @@ mod user_handler_test {
     async fn test_get_users_by_id_not_exists() {
         let pool = setup_test_db("user_handler_test", "test_get_users_by_id_not_exists").await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
-        let req = test::TestRequest::get().uri("/users?target=id&id=1000").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?target=id&id=1000")
+            .to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
         assert!(res.message.contains("NotFound"));
@@ -223,11 +254,12 @@ mod user_handler_test {
     async fn test_get_users_by_name_not_exists() {
         let pool = setup_test_db("user_handler_test", "test_get_users_by_name_not_exists").await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
-        let req = test::TestRequest::get().uri("/users?target=name&name=not_exists").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?target=name&name=not_exists")
+            .to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
         assert!(res.message.contains("NotFound"));
@@ -235,41 +267,62 @@ mod user_handler_test {
 
     #[actix_web::test]
     async fn test_get_users_with_pagination_no_page_size() {
-        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagination_no_page_size").await;
+        let pool = setup_test_db(
+            "user_handler_test",
+            "test_get_users_with_pagination_no_page_size",
+        )
+        .await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
         let req = test::TestRequest::get().uri("/users?page=1").to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
-        assert!(res.message.contains(ErrorKey::UserHandlerGetUsersInvalidPage.to_string().as_str()));
+        assert!(
+            res.message.contains(
+                ErrorKey::UserHandlerGetUsersInvalidPage
+                    .to_string()
+                    .as_str()
+            )
+        );
     }
 
     #[actix_web::test]
     async fn test_get_users_with_pagination_no_page() {
-        let pool = setup_test_db("user_handler_test", "test_get_users_with_pagination_no_page").await;
+        let pool = setup_test_db(
+            "user_handler_test",
+            "test_get_users_with_pagination_no_page",
+        )
+        .await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
-        let req = test::TestRequest::get().uri("/users?page_size=10").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?page_size=10")
+            .to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
-        assert!(res.message.contains(ErrorKey::UserHandlerGetUsersInvalidPage.to_string().as_str()));
+        assert!(
+            res.message.contains(
+                ErrorKey::UserHandlerGetUsersInvalidPage
+                    .to_string()
+                    .as_str()
+            )
+        );
     }
 
     #[actix_web::test]
     async fn test_get_user_by_id_invalid_query() {
         let pool = setup_test_db("user_handler_test", "test_get_user_by_id_invalid_query").await;
 
-        let app = test::init_service(
-            App::new().service(get_users).app_data(web::Data::new(pool))
-        ).await;
+        let app =
+            test::init_service(App::new().service(get_users).app_data(web::Data::new(pool))).await;
 
-        let req = test::TestRequest::get().uri("/users?target=id&id=abc").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?target=id&id=abc")
+            .to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
         assert!(res.message.contains("BadRequest"));
@@ -280,8 +333,12 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_create_user").await;
 
         let app = test::init_service(
-            App::new().service(create_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(create_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
         let req = test::TestRequest::post()
             .uri("/users")
@@ -300,7 +357,9 @@ mod user_handler_test {
         assert_eq!(res.results[0].username, "testuser10");
         assert_eq!(res.results[0].email, "test10@example.com");
 
-        let req = test::TestRequest::get().uri("/users?target=name&name=testuser10").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?target=name&name=testuser10")
+            .to_request();
         let res: UserResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 0);
         assert_eq!(res.message, "OK");
@@ -314,9 +373,13 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_create_user_invalid_email").await;
 
         let app = test::init_service(
-            App::new().service(create_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
-        
+            App::new()
+                .service(create_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
+
         let req = test::TestRequest::post()
             .uri("/users")
             .set_json(User {
@@ -337,8 +400,12 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_create_exist_username").await;
 
         let app = test::init_service(
-            App::new().service(create_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(create_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
         let req = test::TestRequest::post()
             .uri("/users")
@@ -360,12 +427,14 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_create_user_no_param").await;
 
         let app = test::init_service(
-            App::new().service(create_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(create_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
-        let req = test::TestRequest::post()
-            .uri("/users")
-            .to_request();
+        let req = test::TestRequest::post().uri("/users").to_request();
 
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
@@ -377,8 +446,12 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_create_user_empty_param").await;
 
         let app = test::init_service(
-            App::new().service(create_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(create_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
         let req = test::TestRequest::post()
             .uri("/users")
@@ -400,9 +473,13 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_create_user_duplicate_email").await;
 
         let app = test::init_service(
-            App::new().service(create_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
-        
+            App::new()
+                .service(create_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
+
         let req = test::TestRequest::post()
             .uri("/users")
             .set_json(User {
@@ -423,8 +500,12 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_update_user").await;
 
         let app = test::init_service(
-            App::new().service(update_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(update_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
         let req = test::TestRequest::post()
             .uri("/users/1")
@@ -443,7 +524,9 @@ mod user_handler_test {
         assert_eq!(res.results[0].username, "testuser1_x");
         assert_eq!(res.results[0].email, "test1_x@example.com");
 
-        let req = test::TestRequest::get().uri("/users?target=name&name=testuser1_x").to_request();
+        let req = test::TestRequest::get()
+            .uri("/users?target=name&name=testuser1_x")
+            .to_request();
         let res: UserResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 0);
         assert_eq!(res.message, "OK");
@@ -457,8 +540,12 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_update_user_invalid_id").await;
 
         let app = test::init_service(
-            App::new().service(update_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(update_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
         let req = test::TestRequest::post()
             .uri("/users/100")
@@ -480,9 +567,13 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_update_user_invalid_email").await;
 
         let app = test::init_service(
-            App::new().service(update_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
-        
+            App::new()
+                .service(update_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
+
         let req = test::TestRequest::post()
             .uri("/users/1")
             .set_json(User {
@@ -503,8 +594,12 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_update_id_missmatch").await;
 
         let app = test::init_service(
-            App::new().service(update_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(update_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
         let req = test::TestRequest::post()
             .uri("/users/1")
@@ -527,12 +622,14 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_update_user_no_param").await;
 
         let app = test::init_service(
-            App::new().service(update_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(update_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
-        let req = test::TestRequest::post()
-            .uri("/users/1")
-            .to_request();
+        let req = test::TestRequest::post().uri("/users/1").to_request();
 
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
@@ -544,8 +641,12 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_update_user_empty_param").await;
 
         let app = test::init_service(
-            App::new().service(update_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(update_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
         let req = test::TestRequest::post()
             .uri("/users/1")
@@ -567,8 +668,12 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_update_user_duplicate_username").await;
 
         let app = test::init_service(
-            App::new().service(update_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(update_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
         let req = test::TestRequest::post()
             .uri("/users/2")
@@ -590,8 +695,12 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_update_user_duplicate_email").await;
 
         let app = test::init_service(
-            App::new().service(update_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(update_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
         let req = test::TestRequest::post()
             .uri("/users/2")
@@ -613,15 +722,22 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_update_user_invalid_path").await;
 
         let app = test::init_service(
-            App::new().service(update_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(update_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
-        let req = test::TestRequest::post().set_json(User {
-            user_id: Some(1),
-            username: "testuser1_x".to_string(),
-            email: "test1_x@example.com".to_string(),
-            password_hash: "dummy_hash_1_x".to_string(),
-        }).uri("/users/abc").to_request();
+        let req = test::TestRequest::post()
+            .set_json(User {
+                user_id: Some(1),
+                username: "testuser1_x".to_string(),
+                email: "test1_x@example.com".to_string(),
+                password_hash: "dummy_hash_1_x".to_string(),
+            })
+            .uri("/users/abc")
+            .to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 1);
         assert!(res.message.contains("BadRequest"));
@@ -632,9 +748,13 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_delete_user").await;
 
         let app = test::init_service(
-            App::new().service(delete_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
-        
+            App::new()
+                .service(delete_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
+
         let req = test::TestRequest::delete().uri("/users/9").to_request();
         let res: UserResponse = test::call_and_read_body_json(&app, req).await;
         assert_eq!(res.rc, 0);
@@ -647,8 +767,12 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_delete_user_invalid_path").await;
 
         let app = test::init_service(
-            App::new().service(delete_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(delete_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
         let req = test::TestRequest::delete().uri("/users/abc").to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;
@@ -661,8 +785,12 @@ mod user_handler_test {
         let pool = setup_test_db("user_handler_test", "test_delete_user_not_exists").await;
 
         let app = test::init_service(
-            App::new().service(delete_user).service(get_users).app_data(web::Data::new(pool))
-        ).await;
+            App::new()
+                .service(delete_user)
+                .service(get_users)
+                .app_data(web::Data::new(pool)),
+        )
+        .await;
 
         let req = test::TestRequest::delete().uri("/users/100").to_request();
         let res: ErrorResponse = test::call_and_read_body_json(&app, req).await;

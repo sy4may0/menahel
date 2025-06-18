@@ -90,7 +90,6 @@ impl TaskStatus {
             ))),
         }
     }
-
 }
 
 pub enum TaskFilterValue {

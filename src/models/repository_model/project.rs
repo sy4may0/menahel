@@ -8,6 +8,9 @@ pub struct Project {
 
 impl Project {
     pub fn new(name: String) -> Self {
-        Self { project_id: None, name }
+        Self {
+            project_id: None,
+            name,
+        }
     }
 }

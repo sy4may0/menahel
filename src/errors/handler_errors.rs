@@ -1,5 +1,5 @@
-use thiserror::Error;
 use crate::errors::db_error::DBAccessError;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum HandlerError {
@@ -28,7 +28,9 @@ impl HandlerError {
     pub fn status_code(&self) -> actix_web::http::StatusCode {
         match self {
             HandlerError::NotFound(_) => actix_web::http::StatusCode::NOT_FOUND,
-            HandlerError::InternalServerError(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+            HandlerError::InternalServerError(_) => {
+                actix_web::http::StatusCode::INTERNAL_SERVER_ERROR
+            }
             HandlerError::BadRequest(_) => actix_web::http::StatusCode::BAD_REQUEST,
         }
     }

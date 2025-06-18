@@ -333,7 +333,10 @@ mod project_repo_test {
     #[sqlx::test(fixtures("projects"))]
     async fn test_project_repo_get_projects_with_pagination(pool: SqlitePool) {
         let project_repo = ProjectRepository::new(pool);
-        let retrieved_projects = project_repo.get_projects_with_pagination(&1, &5).await.unwrap();
+        let retrieved_projects = project_repo
+            .get_projects_with_pagination(&1, &5)
+            .await
+            .unwrap();
         assert_eq!(retrieved_projects.len(), 5);
         assert_eq!(retrieved_projects[0].name, "Test Project 0");
         assert_eq!(retrieved_projects[1].name, "Test Project 1");
@@ -341,7 +344,10 @@ mod project_repo_test {
         assert_eq!(retrieved_projects[3].name, "Test Project 3");
         assert_eq!(retrieved_projects[4].name, "Test Project 4");
 
-        let retrieved_projects = project_repo.get_projects_with_pagination(&2, &5).await.unwrap();
+        let retrieved_projects = project_repo
+            .get_projects_with_pagination(&2, &5)
+            .await
+            .unwrap();
         assert_eq!(retrieved_projects.len(), 5);
         assert_eq!(retrieved_projects[0].name, "Test Project 5");
         assert_eq!(retrieved_projects[1].name, "Test Project 6");

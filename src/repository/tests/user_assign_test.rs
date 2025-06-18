@@ -1,8 +1,8 @@
 use crate::models::{UserAssign, UserAssignFilter};
 use crate::repository::user_assign_repo::{
-    UserAssignRepository, get_user_assign_by_id_with_transaction,
-    get_user_assign_by_task_id_with_transaction, get_user_assign_by_user_id_with_transaction,
-    get_related_task_ids_by_user_ids, get_related_user_ids_by_task_ids,
+    UserAssignRepository, get_related_task_ids_by_user_ids, get_related_user_ids_by_task_ids,
+    get_user_assign_by_id_with_transaction, get_user_assign_by_task_id_with_transaction,
+    get_user_assign_by_user_id_with_transaction,
 };
 use sqlx::sqlite::SqlitePool;
 
@@ -121,10 +121,7 @@ mod user_assign_repo_test {
     async fn test_user_assign_repo_get_user_assign_by_id(pool: SqlitePool) {
         let user_assign_repo = UserAssignRepository::new(pool);
 
-        let user_assign = user_assign_repo
-            .get_user_assign_by_id(1)
-            .await
-            .unwrap();
+        let user_assign = user_assign_repo.get_user_assign_by_id(1).await.unwrap();
         assert_eq!(user_assign.user_id, 1);
         assert_eq!(user_assign.task_id, 3);
     }
@@ -251,13 +248,19 @@ mod user_assign_repo_test {
             task_id: None,
         };
 
-        let user_assigns = user_assign_repo.get_user_assigns_by_filter(Some(&filter), Some(&1), Some(&1)).await.unwrap();
+        let user_assigns = user_assign_repo
+            .get_user_assigns_by_filter(Some(&filter), Some(&1), Some(&1))
+            .await
+            .unwrap();
 
         assert_eq!(user_assigns.len(), 1);
         assert_eq!(user_assigns[0].user_id, 1);
         assert_eq!(user_assigns[0].task_id, 3);
 
-        let user_assigns = user_assign_repo.get_user_assigns_by_filter(Some(&filter), Some(&2), Some(&1)).await.unwrap();
+        let user_assigns = user_assign_repo
+            .get_user_assigns_by_filter(Some(&filter), Some(&2), Some(&1))
+            .await
+            .unwrap();
         assert_eq!(user_assigns.len(), 1);
         assert_eq!(user_assigns[0].user_id, 1);
         assert_eq!(user_assigns[0].task_id, 11);
@@ -418,8 +421,7 @@ mod user_assign_repo_test {
     ) {
         let mut tx = pool.begin().await.unwrap();
 
-        let user_assign = get_user_assign_by_id_with_transaction(100, &mut tx)
-            .await;
+        let user_assign = get_user_assign_by_id_with_transaction(100, &mut tx).await;
         assert!(user_assign.is_err());
     }
 
@@ -471,10 +473,16 @@ mod user_assign_repo_test {
     async fn test_user_assign_repo_get_user_assigns_with_pagination(pool: SqlitePool) {
         let user_assign_repo = UserAssignRepository::new(pool);
 
-        let user_assigns = user_assign_repo.get_user_assigns_with_pagination(&1, &3).await.unwrap();
+        let user_assigns = user_assign_repo
+            .get_user_assigns_with_pagination(&1, &3)
+            .await
+            .unwrap();
         assert_eq!(user_assigns.len(), 3);
 
-        let user_assigns = user_assign_repo.get_user_assigns_with_pagination(&2, &3).await.unwrap();
+        let user_assigns = user_assign_repo
+            .get_user_assigns_with_pagination(&2, &3)
+            .await
+            .unwrap();
         assert_eq!(user_assigns.len(), 1);
     }
 
@@ -482,7 +490,9 @@ mod user_assign_repo_test {
     async fn test_user_assign_repo_get_user_assigns_with_pagination_not_found(pool: SqlitePool) {
         let user_assign_repo = UserAssignRepository::new(pool);
 
-        let user_assigns = user_assign_repo.get_user_assigns_with_pagination(&3, &10).await;
+        let user_assigns = user_assign_repo
+            .get_user_assigns_with_pagination(&3, &10)
+            .await;
         assert!(user_assigns.is_err());
     }
 
@@ -490,23 +500,33 @@ mod user_assign_repo_test {
     async fn test_user_assign_repo_get_user_assigns_with_pagination_invalid_page(pool: SqlitePool) {
         let user_assign_repo = UserAssignRepository::new(pool);
 
-        let user_assigns = user_assign_repo.get_user_assigns_with_pagination(&0, &10).await;
+        let user_assigns = user_assign_repo
+            .get_user_assigns_with_pagination(&0, &10)
+            .await;
         assert!(user_assigns.is_err());
     }
 
     #[sqlx::test(fixtures("user_assign"))]
-    async fn test_user_assign_repo_get_user_assigns_with_pagination_invalid_page_size(pool: SqlitePool) {
+    async fn test_user_assign_repo_get_user_assigns_with_pagination_invalid_page_size(
+        pool: SqlitePool,
+    ) {
         let user_assign_repo = UserAssignRepository::new(pool);
 
-        let user_assigns = user_assign_repo.get_user_assigns_with_pagination(&1, &0).await;
+        let user_assigns = user_assign_repo
+            .get_user_assigns_with_pagination(&1, &0)
+            .await;
         assert!(user_assigns.is_err());
     }
 
     #[sqlx::test(fixtures("user_assign"))]
-    async fn test_user_assign_repo_get_user_assigns_with_pagination_too_large_page_size(pool: SqlitePool) {
+    async fn test_user_assign_repo_get_user_assigns_with_pagination_too_large_page_size(
+        pool: SqlitePool,
+    ) {
         let user_assign_repo = UserAssignRepository::new(pool);
 
-        let user_assigns = user_assign_repo.get_user_assigns_with_pagination(&1, &1000).await;
+        let user_assigns = user_assign_repo
+            .get_user_assigns_with_pagination(&1, &1000)
+            .await;
         assert!(user_assigns.is_err());
     }
 

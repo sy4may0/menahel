@@ -1,17 +1,18 @@
+use crate::errors::message_def::comment::add_comment_error_messages;
+use crate::errors::message_def::comment_handler::add_comment_handler_error_messages;
+use crate::errors::message_def::project::add_project_error_messages;
+use crate::errors::message_def::project_handler::add_project_handler_error_messages;
+use crate::errors::message_def::repository::add_repository_error_messages;
+use crate::errors::message_def::task::add_task_error_messages;
+use crate::errors::message_def::task_handler::add_task_handler_error_messages;
+use crate::errors::message_def::task_user::add_task_user_error_messages;
+use crate::errors::message_def::user::add_user_error_messages;
+use crate::errors::message_def::user_assign::add_user_assign_error_messages;
+use crate::errors::message_def::user_assign_handler::add_user_assign_handler_error_messages;
+use crate::errors::message_def::user_handler::add_user_handler_error_messages;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::fmt;
-use crate::errors::message_def::user::add_user_error_messages;
-use crate::errors::message_def::project::add_project_error_messages;
-use crate::errors::message_def::task::add_task_error_messages;
-use crate::errors::message_def::user_assign::add_user_assign_error_messages;
-use crate::errors::message_def::comment::add_comment_error_messages;
-use crate::errors::message_def::user_handler::add_user_handler_error_messages;
-use crate::errors::message_def::project_handler::add_project_handler_error_messages;
-use crate::errors::message_def::task_handler::add_task_handler_error_messages;
-use crate::errors::message_def::user_assign_handler::add_user_assign_handler_error_messages;
-use crate::errors::message_def::task_user::add_task_user_error_messages;
-use crate::errors::message_def::repository::add_repository_error_messages;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ErrorKey {
@@ -56,6 +57,7 @@ pub enum ErrorKey {
 
     // タスク関連のエラー
     TaskIdInvalid,
+    TaskIdMustBeNone,
     TaskProjectIdInvalid,
     TaskParentIdInvalid,
     TaskLevelInvalid,
@@ -83,6 +85,7 @@ pub enum ErrorKey {
 
     // ユーザー割り当て関連のエラー
     UserAssignIdInvalid,
+    UserAssignIdMustBeNone,
     UserAssignCreateFailed,
     UserAssignGetByIdFailed,
     UserAssignGetByTaskIdFailed,
@@ -104,6 +107,8 @@ pub enum ErrorKey {
     UserAssignGetUserAssignsCountFailed,
 
     // コメント関連のエラー
+    CommentIdInvalid,
+    CommentIdMustBeNone,
     CommentCreateFailed,
     CommentGetByIdFailed,
     CommentGetByTaskIdFailed,
@@ -115,6 +120,7 @@ pub enum ErrorKey {
     CommentDeleteFailedByIdNotFound,
     CommentUserIdInvalid,
     CommentTaskIdInvalid,
+    CommentIdNotFound,
     CommentUserIdNotFound,
     CommentTaskIdNotFound,
     CommentContentEmpty,
@@ -176,6 +182,17 @@ pub enum ErrorKey {
     UserAssignHandlerPathAndBodyIdMismatch,
     UserAssignHandlerInvalidQuery,
     UserAssignHandlerInvalidPath,
+
+    // コメントハンドラ関連のエラー
+    CommentHandlerGetCommentInvalidPage,
+    CommentHandlerGetCommentInvalidTarget,
+    CommentHandlerGetCommentNoIdSpecified,
+    CommentHandlerGetCommentNoTaskIdSpecified,
+    CommentHandlerGetCommentNoUserIdSpecified,
+    CommentHandlerInvalidJsonPost,
+    CommentHandlerPathAndBodyIdMismatch,
+    CommentHandlerInvalidQuery,
+    CommentHandlerInvalidPath,
 }
 
 impl fmt::Display for ErrorKey {
@@ -226,6 +243,7 @@ impl fmt::Display for ErrorKey {
 
             // タスク関連のエラー
             ErrorKey::TaskIdInvalid => write!(f, "TaskIdInvalid"),
+            ErrorKey::TaskIdMustBeNone => write!(f, "TaskIdMustBeNone"),
             ErrorKey::TaskProjectIdInvalid => write!(f, "TaskProjectIdInvalid"),
             ErrorKey::TaskParentIdInvalid => write!(f, "TaskParentIdInvalid"),
             ErrorKey::TaskLevelInvalid => write!(f, "TaskLevelInvalid"),
@@ -251,10 +269,11 @@ impl fmt::Display for ErrorKey {
             ErrorKey::TaskDeleteFailedByIdNotFound => write!(f, "TaskDeleteFailedByIdNotFound"),
             ErrorKey::TaskGetCountFailed => write!(f, "TaskGetCountFailed"),
             ErrorKey::TaskGetPaginationNotFound => write!(f, "TaskGetPaginationNotFound"),
-            ErrorKey::TaskGetByIdNotFound => write!(f, "TaskGetByIdNotFound"),  
+            ErrorKey::TaskGetByIdNotFound => write!(f, "TaskGetByIdNotFound"),
 
             // ユーザー割り当て関連のエラー
             ErrorKey::UserAssignIdInvalid => write!(f, "UserAssignIdInvalid"),
+            ErrorKey::UserAssignIdMustBeNone => write!(f, "UserAssignIdMustBeNone"),
             ErrorKey::UserAssignCreateFailed => write!(f, "UserAssignCreateFailed"),
             ErrorKey::UserAssignGetByIdFailed => write!(f, "UserAssignGetByIdFailed"),
             ErrorKey::UserAssignGetByTaskIdFailed => write!(f, "UserAssignGetByTaskIdFailed"),
@@ -275,7 +294,9 @@ impl fmt::Display for ErrorKey {
                 write!(f, "UserAssignGetByUserIdAndTaskIdFailed")
             }
             ErrorKey::UserAssignGetByIdNotFound => write!(f, "UserAssignGetByIdNotFound"),
-            ErrorKey::UserAssignGetPaginationNotFound => write!(f, "UserAssignGetPaginationNotFound"),
+            ErrorKey::UserAssignGetPaginationNotFound => {
+                write!(f, "UserAssignGetPaginationNotFound")
+            }
             ErrorKey::UserAssignGetByUserIdAndTaskIdNotFound => {
                 write!(f, "UserAssignGetByUserIdAndTaskIdNotFound")
             }
@@ -284,6 +305,8 @@ impl fmt::Display for ErrorKey {
             }
 
             // コメント関連のエラー
+            ErrorKey::CommentIdInvalid => write!(f, "CommentIdInvalid"),
+            ErrorKey::CommentIdMustBeNone => write!(f, "CommentIdMustBeNone"),
             ErrorKey::CommentCreateFailed => write!(f, "CommentCreateFailed"),
             ErrorKey::CommentGetByIdFailed => write!(f, "CommentGetByIdFailed"),
             ErrorKey::CommentGetByTaskIdFailed => write!(f, "CommentGetByTaskIdFailed"),
@@ -297,6 +320,7 @@ impl fmt::Display for ErrorKey {
             ErrorKey::CommentDeleteFailedByIdNotFound => {
                 write!(f, "CommentDeleteFailedByIdNotFound")
             }
+            ErrorKey::CommentIdNotFound => write!(f, "CommentIdNotFound"),
             ErrorKey::CommentUserIdInvalid => write!(f, "CommentUserIdInvalid"),
             ErrorKey::CommentTaskIdInvalid => write!(f, "CommentTaskIdInvalid"),
             ErrorKey::CommentUserIdNotFound => write!(f, "CommentUserIdNotFound"),
@@ -305,7 +329,7 @@ impl fmt::Display for ErrorKey {
             ErrorKey::CommentContentTooLong => write!(f, "CommentContentTooLong"),
             ErrorKey::CommentToNotMaxLevelTask => write!(f, "CommentToNotMaxLevelTask"),
             ErrorKey::CommentGetByIdNotFound => write!(f, "CommentGetByIdNotFound"),
-            ErrorKey::CommentGetPaginationNotFound => write!(f, "CommentGetPaginationNotFound"),    
+            ErrorKey::CommentGetPaginationNotFound => write!(f, "CommentGetPaginationNotFound"),
             ErrorKey::CommentGetCountFailed => write!(f, "CommentGetCountFailed"),
 
             // リポジトリ共通エラー
@@ -322,44 +346,107 @@ impl fmt::Display for ErrorKey {
 
             // ユーザーハンドラ関連のエラー
             ErrorKey::UserHandlerGetUsersInvalidPage => write!(f, "UserHandlerGetUsersInvalidPage"),
-            ErrorKey::UserHandlerGetUsersInvalidTarget => write!(f, "UserHandlerGetUsersInvalidTarget"),
-            ErrorKey::UserHandlerGetUsersNoNameSpecified => write!(f, "UserHandlerGetUsersNoNameSpecified"),
-            ErrorKey::UserHandlerGetUsersNoIdSpecified => write!(f, "UserHandlerGetUsersNoIdSpecified"),
-            ErrorKey::UserHandlerPathAndBodyIdMismatch => write!(f, "UserHandlerPathAndBodyIdMismatch"),
+            ErrorKey::UserHandlerGetUsersInvalidTarget => {
+                write!(f, "UserHandlerGetUsersInvalidTarget")
+            }
+            ErrorKey::UserHandlerGetUsersNoNameSpecified => {
+                write!(f, "UserHandlerGetUsersNoNameSpecified")
+            }
+            ErrorKey::UserHandlerGetUsersNoIdSpecified => {
+                write!(f, "UserHandlerGetUsersNoIdSpecified")
+            }
+            ErrorKey::UserHandlerPathAndBodyIdMismatch => {
+                write!(f, "UserHandlerPathAndBodyIdMismatch")
+            }
             ErrorKey::UserHandlerInvalidJsonPost => write!(f, "UserHandlerInvalidJsonPost"),
             ErrorKey::UserHandlerInvalidQuery => write!(f, "UserHandlerInvalidQuery"),
             ErrorKey::UserHandlerInvalidPath => write!(f, "UserHandlerInvalidPath"),
 
             // プロジェクトハンドラ関連のエラー
-            ErrorKey::ProjectHandlerGetProjectsInvalidPage => write!(f, "ProjectHandlerGetProjectsInvalidPage"),
-            ErrorKey::ProjectHandlerGetProjectsInvalidTarget => write!(f, "ProjectHandlerGetProjectsInvalidTarget"),
-            ErrorKey::ProjectHandlerGetProjectsNoNameSpecified => write!(f, "ProjectHandlerGetProjectsNoNameSpecified"),
-            ErrorKey::ProjectHandlerGetProjectsNoIdSpecified => write!(f, "ProjectHandlerGetProjectsNoIdSpecified"),
-            ErrorKey::ProjectHandlerPathAndBodyIdMismatch => write!(f, "ProjectHandlerPathAndBodyIdMismatch"),
+            ErrorKey::ProjectHandlerGetProjectsInvalidPage => {
+                write!(f, "ProjectHandlerGetProjectsInvalidPage")
+            }
+            ErrorKey::ProjectHandlerGetProjectsInvalidTarget => {
+                write!(f, "ProjectHandlerGetProjectsInvalidTarget")
+            }
+            ErrorKey::ProjectHandlerGetProjectsNoNameSpecified => {
+                write!(f, "ProjectHandlerGetProjectsNoNameSpecified")
+            }
+            ErrorKey::ProjectHandlerGetProjectsNoIdSpecified => {
+                write!(f, "ProjectHandlerGetProjectsNoIdSpecified")
+            }
+            ErrorKey::ProjectHandlerPathAndBodyIdMismatch => {
+                write!(f, "ProjectHandlerPathAndBodyIdMismatch")
+            }
             ErrorKey::ProjectHandlerInvalidJsonPost => write!(f, "ProjectHandlerInvalidJsonPost"),
             ErrorKey::ProjectHandlerInvalidQuery => write!(f, "ProjectHandlerInvalidQuery"),
             ErrorKey::ProjectHandlerInvalidPath => write!(f, "ProjectHandlerInvalidPath"),
 
             // タスクハンドラ関連のエラー
             ErrorKey::TaskHandlerGetTasksInvalidPage => write!(f, "TaskHandlerGetTasksInvalidPage"),
-            ErrorKey::TaskHandlerGetTasksInvalidTarget => write!(f, "TaskHandlerGetTasksInvalidTarget"),
-            ErrorKey::TaskHandlerGetTasksNoIdSpecified => write!(f, "TaskHandlerGetTasksNoIdSpecified"),
+            ErrorKey::TaskHandlerGetTasksInvalidTarget => {
+                write!(f, "TaskHandlerGetTasksInvalidTarget")
+            }
+            ErrorKey::TaskHandlerGetTasksNoIdSpecified => {
+                write!(f, "TaskHandlerGetTasksNoIdSpecified")
+            }
             ErrorKey::TaskHandlerInvalidJsonPost => write!(f, "TaskHandlerInvalidJsonPost"),
-            ErrorKey::TaskHandlerPathAndBodyIdMismatch => write!(f, "TaskHandlerPathAndBodyIdMismatch"),
+            ErrorKey::TaskHandlerPathAndBodyIdMismatch => {
+                write!(f, "TaskHandlerPathAndBodyIdMismatch")
+            }
             ErrorKey::TaskHandlerInvalidQuery => write!(f, "TaskHandlerInvalidQuery"),
             ErrorKey::TaskHandlerInvalidPath => write!(f, "TaskHandlerInvalidPath"),
-            ErrorKey::TaskHandlerGetUserIdsParseFailed => write!(f, "TaskHandlerGetUserIdsParseFailed"),
+            ErrorKey::TaskHandlerGetUserIdsParseFailed => {
+                write!(f, "TaskHandlerGetUserIdsParseFailed")
+            }
 
             // ユーザー割り当てハンドラ関連のエラー
-            ErrorKey::UserAssignHandlerGetUserAssignsInvalidPage => write!(f, "UserAssignHandlerGetUserAssignsInvalidPage"),
-            ErrorKey::UserAssignHandlerGetUserAssignsInvalidTarget => write!(f, "UserAssignHandlerGetUserAssignsInvalidTarget"),
-            ErrorKey::UserAssignHandlerGetUserAssignsNoIdSpecified => write!(f, "UserAssignHandlerGetUserAssignsNoIdSpecified"),
-            ErrorKey::UserAssignHandlerGetUserAssignsNoUserIdSpecified => write!(f, "UserAssignHandlerGetUserAssignsNoUserIdSpecified"),
-            ErrorKey::UserAssignHandlerGetUserAssignsNoTaskIdSpecified => write!(f, "UserAssignHandlerGetUserAssignsNoTaskIdSpecified"),
-            ErrorKey::UserAssignHandlerInvalidJsonPost => write!(f, "UserAssignHandlerInvalidJsonPost"),
-            ErrorKey::UserAssignHandlerPathAndBodyIdMismatch => write!(f, "UserAssignHandlerPathAndBodyIdMismatch"),
+            ErrorKey::UserAssignHandlerGetUserAssignsInvalidPage => {
+                write!(f, "UserAssignHandlerGetUserAssignsInvalidPage")
+            }
+            ErrorKey::UserAssignHandlerGetUserAssignsInvalidTarget => {
+                write!(f, "UserAssignHandlerGetUserAssignsInvalidTarget")
+            }
+            ErrorKey::UserAssignHandlerGetUserAssignsNoIdSpecified => {
+                write!(f, "UserAssignHandlerGetUserAssignsNoIdSpecified")
+            }
+            ErrorKey::UserAssignHandlerGetUserAssignsNoUserIdSpecified => {
+                write!(f, "UserAssignHandlerGetUserAssignsNoUserIdSpecified")
+            }
+            ErrorKey::UserAssignHandlerGetUserAssignsNoTaskIdSpecified => {
+                write!(f, "UserAssignHandlerGetUserAssignsNoTaskIdSpecified")
+            }
+            ErrorKey::UserAssignHandlerInvalidJsonPost => {
+                write!(f, "UserAssignHandlerInvalidJsonPost")
+            }
+            ErrorKey::UserAssignHandlerPathAndBodyIdMismatch => {
+                write!(f, "UserAssignHandlerPathAndBodyIdMismatch")
+            }
             ErrorKey::UserAssignHandlerInvalidQuery => write!(f, "UserAssignHandlerInvalidQuery"),
             ErrorKey::UserAssignHandlerInvalidPath => write!(f, "UserAssignHandlerInvalidPath"),
+
+            // コメントハンドラ関連のエラー
+            ErrorKey::CommentHandlerGetCommentInvalidPage => {
+                write!(f, "CommentHandlerGetCommentInvalidPage")
+            }
+            ErrorKey::CommentHandlerGetCommentInvalidTarget => {
+                write!(f, "CommentHandlerGetCommentInvalidTarget")
+            }
+            ErrorKey::CommentHandlerGetCommentNoIdSpecified => {
+                write!(f, "CommentHandlerGetCommentNoIdSpecified")
+            }
+            ErrorKey::CommentHandlerGetCommentNoTaskIdSpecified => {
+                write!(f, "CommentHandlerGetCommentNoTaskIdSpecified")
+            }
+            ErrorKey::CommentHandlerGetCommentNoUserIdSpecified => {
+                write!(f, "CommentHandlerGetCommentNoUserIdSpecified")
+            }
+            ErrorKey::CommentHandlerInvalidJsonPost => write!(f, "CommentHandlerInvalidJsonPost"),
+            ErrorKey::CommentHandlerPathAndBodyIdMismatch => {
+                write!(f, "CommentHandlerPathAndBodyIdMismatch")
+            }
+            ErrorKey::CommentHandlerInvalidQuery => write!(f, "CommentHandlerInvalidQuery"),
+            ErrorKey::CommentHandlerInvalidPath => write!(f, "CommentHandlerInvalidPath"),
         }
     }
 }
@@ -384,6 +471,7 @@ static ERROR_MESSAGES: Lazy<HashMap<ErrorKey, HashMap<&'static str, &'static str
         add_user_assign_handler_error_messages(&mut map);
         add_task_user_error_messages(&mut map);
         add_repository_error_messages(&mut map);
+        add_comment_handler_error_messages(&mut map);
 
         map
     });

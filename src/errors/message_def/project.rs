@@ -22,19 +22,31 @@ pub fn add_project_error_messages(
     map.insert(ErrorKey::ProjectNameTooLong, project_name_too_long);
 
     let mut project_id_must_be_none = HashMap::new();
-    project_id_must_be_none.insert("en", "ID was specified in a process that does not allow ID to be specified.");
-    project_id_must_be_none.insert("jp", "プロジェクトIDを指定できない処理でIDが指定されました。");
+    project_id_must_be_none.insert(
+        "en",
+        "ID was specified in a process that does not allow ID to be specified.",
+    );
+    project_id_must_be_none.insert(
+        "jp",
+        "プロジェクトIDを指定できない処理でIDが指定されました。",
+    );
     map.insert(ErrorKey::ProjectIdMustBeNone, project_id_must_be_none);
 
     let mut project_get_by_id_not_found = HashMap::new();
     project_get_by_id_not_found.insert("en", "Project ID not found");
     project_get_by_id_not_found.insert("jp", "プロジェクトIDが見つかりません");
-    map.insert(ErrorKey::ProjectGetByIdNotFound, project_get_by_id_not_found);
+    map.insert(
+        ErrorKey::ProjectGetByIdNotFound,
+        project_get_by_id_not_found,
+    );
 
     let mut project_get_by_name_not_found = HashMap::new();
     project_get_by_name_not_found.insert("en", "Project name not found");
     project_get_by_name_not_found.insert("jp", "プロジェクト名が見つかりません");
-    map.insert(ErrorKey::ProjectGetByNameNotFound, project_get_by_name_not_found);
+    map.insert(
+        ErrorKey::ProjectGetByNameNotFound,
+        project_get_by_name_not_found,
+    );
 
     let mut project_create_failed = HashMap::new();
     project_create_failed.insert(
@@ -123,15 +135,12 @@ pub fn add_project_error_messages(
         "jp",
         "DB操作処理の問題によりプロジェクトの数の取得に失敗しました",
     );
-    map.insert(ErrorKey::ProjectGetProjectsCountFailed, project_get_projects_count_failed);
+    map.insert(
+        ErrorKey::ProjectGetProjectsCountFailed,
+        project_get_projects_count_failed,
+    );
 
     let mut project_get_pagenation_not_found = HashMap::new();
-    project_get_pagenation_not_found.insert(
-        "en",
-        "No projects found on the specified page",
-    );
-    project_get_pagenation_not_found.insert(
-        "jp",
-        "指定ページにプロジェクトが存在しません",
-    );
-} 
+    project_get_pagenation_not_found.insert("en", "No projects found on the specified page");
+    project_get_pagenation_not_found.insert("jp", "指定ページにプロジェクトが存在しません");
+}

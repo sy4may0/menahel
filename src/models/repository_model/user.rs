@@ -1,6 +1,6 @@
+use crate::repository::validations::validate_user_password;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use crate::repository::validations::validate_user_password;
 
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct User {

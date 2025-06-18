@@ -65,5 +65,17 @@ INSERT INTO comments (comment_id, user_id, task_id, content, created_at) VALUES 
 INSERT INTO comments (comment_id, user_id, task_id, content, created_at) VALUES (2, 1, 11, 'Test Comment 1', 0);
 INSERT INTO comments (comment_id, user_id, task_id, content, created_at) VALUES (3, 1, 12, 'Test Comment 2', 0);
 
+INSERT INTO comments (comment_id, user_id, task_id, content, created_at) VALUES (4, 2, 3, 'Test Comment 3', 0);
+INSERT INTO comments (comment_id, user_id, task_id, content, created_at) VALUES (5, 2, 11, 'Test Comment 4', 0);
+INSERT INTO comments (comment_id, user_id, task_id, content, created_at) VALUES (6, 2, 12, 'Test Comment 5', 0);
+
+INSERT INTO comments (comment_id, user_id, task_id, content, created_at) VALUES (7, 1, 3, 'Test Comment 6', 0);
+INSERT INTO comments (comment_id, user_id, task_id, content, created_at) VALUES (8, 1, 11, 'Test Comment 7', 0);
+INSERT INTO comments (comment_id, user_id, task_id, content, created_at) VALUES (9, 1, 12, 'Test Comment 8', 0);
+
+INSERT INTO comments (comment_id, user_id, task_id, content, created_at) VALUES (10, 2, 3, 'Test Comment 9', 0);
+INSERT INTO comments (comment_id, user_id, task_id, content, created_at) VALUES (11, 2, 11, 'Test Comment 10', 0);
+INSERT INTO comments (comment_id, user_id, task_id, content, created_at) VALUES (12, 2, 12, 'Test Comment 11', 0);
+
 
 

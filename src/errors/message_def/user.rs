@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use crate::errors::messages::ErrorKey;
 
-pub fn add_user_error_messages(
-    map: &mut HashMap<ErrorKey, HashMap<&'static str, &'static str>>,
-) {
+pub fn add_user_error_messages(map: &mut HashMap<ErrorKey, HashMap<&'static str, &'static str>>) {
     // ユーザー関連のエラーメッセージ
     let mut user_id_invalid = HashMap::new();
     user_id_invalid.insert("en", "User ID must be greater than 0");
@@ -12,7 +10,10 @@ pub fn add_user_error_messages(
     map.insert(ErrorKey::UserIdInvalid, user_id_invalid);
 
     let mut user_id_must_be_none = HashMap::new();
-    user_id_must_be_none.insert("en", "User ID must be None. ID was specified in a process that cannot specify ID.");
+    user_id_must_be_none.insert(
+        "en",
+        "User ID must be None. ID was specified in a process that cannot specify ID.",
+    );
     user_id_must_be_none.insert("jp", "ユーザーIDが指定できない処理でIDが指定されました。");
     map.insert(ErrorKey::UserIdMustBeNone, user_id_must_be_none);
 
@@ -131,8 +132,7 @@ pub fn add_user_error_messages(
     let mut user_delete_failed_by_id_not_found = HashMap::new();
     user_delete_failed_by_id_not_found
         .insert("en", "Failed to delete user becouse user does not exist");
-    user_delete_failed_by_id_not_found
-        .insert("jp", "存在しないユーザーを削除しようとしました。");
+    user_delete_failed_by_id_not_found.insert("jp", "存在しないユーザーを削除しようとしました。");
     map.insert(
         ErrorKey::UserDeleteFailedByIdNotFound,
         user_delete_failed_by_id_not_found,
@@ -143,15 +143,20 @@ pub fn add_user_error_messages(
         "en",
         "Failed to get users count due to database operation failure",
     );
-    user_get_users_count_failed.insert("jp", "DB操作処理の問題によりユーザーの数の取得に失敗しました");
-    map.insert(ErrorKey::UserGetUsersCountFailed, user_get_users_count_failed);
+    user_get_users_count_failed.insert(
+        "jp",
+        "DB操作処理の問題によりユーザーの数の取得に失敗しました",
+    );
+    map.insert(
+        ErrorKey::UserGetUsersCountFailed,
+        user_get_users_count_failed,
+    );
 
     let mut user_get_users_pagination_not_found = HashMap::new();
-    user_get_users_pagination_not_found.insert(
-        "en",
-        "No users found on the specified page",
-    );
+    user_get_users_pagination_not_found.insert("en", "No users found on the specified page");
     user_get_users_pagination_not_found.insert("jp", "指定されたページにユーザーが存在しません");
-    map.insert(ErrorKey::UserGetUsersPaginationNotFound, user_get_users_pagination_not_found);
-
+    map.insert(
+        ErrorKey::UserGetUsersPaginationNotFound,
+        user_get_users_pagination_not_found,
+    );
 }

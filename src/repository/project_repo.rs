@@ -1,7 +1,9 @@
 use crate::errors::db_error::DBAccessError;
 use crate::errors::messages::{ErrorKey, get_error_message};
 use crate::models::Project;
-use crate::repository::validations::{validate_pagination, validate_project_id, validate_project_name};
+use crate::repository::validations::{
+    validate_pagination, validate_project_id, validate_project_name,
+};
 use anyhow::Result;
 use sqlx::{Pool, Sqlite, Transaction};
 
@@ -63,10 +65,10 @@ impl ProjectRepository {
 
         match result {
             Some(project) => Ok(project),
-            None => Err(DBAccessError::NotFoundError(
-                get_error_message(ErrorKey::ProjectGetByIdNotFound,
-                format!("ID = {}", id)
-            )))
+            None => Err(DBAccessError::NotFoundError(get_error_message(
+                ErrorKey::ProjectGetByIdNotFound,
+                format!("ID = {}", id),
+            ))),
         }
     }
 
@@ -93,10 +95,10 @@ impl ProjectRepository {
 
         match result {
             Some(project) => Ok(project),
-            None => Err(DBAccessError::NotFoundError(
-                get_error_message(ErrorKey::ProjectGetByNameNotFound,
-                format!("Name = {}", name)
-            )))
+            None => Err(DBAccessError::NotFoundError(get_error_message(
+                ErrorKey::ProjectGetByNameNotFound,
+                format!("Name = {}", name),
+            ))),
         }
     }
 
@@ -146,22 +148,23 @@ impl ProjectRepository {
         page: &i32,
         page_size: &i32,
     ) -> Result<Vec<Project>, DBAccessError> {
-        let mut tx = self.pool.begin().await.map_err(
-            |e| {
-                DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
-                    ErrorKey::ProjectGetAllFailed,
-                    e.to_string()
-                )))
-            }
-        )?;
-
+        let mut tx = self.pool.begin().await.map_err(|e| {
+            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::ProjectGetAllFailed,
+                e.to_string()
+            )))
+        })?;
 
         let count = get_projects_count_with_transaction(&mut tx).await?;
         validate_pagination(Some(page), Some(page_size), &count)?;
 
         let offset = (*page - 1) * *page_size;
         let limit = *page_size;
-        log::debug!("Get users with pagination: offset: {}, limit: {}", offset, limit);
+        log::debug!(
+            "Get users with pagination: offset: {}, limit: {}",
+            offset,
+            limit
+        );
 
         let result = sqlx::query_as!(
             Project,
@@ -198,10 +201,9 @@ impl ProjectRepository {
                         log::error!("Failed to rollback transaction: {:?}", e);
                     }
                 }
-                Err(DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
-                    ErrorKey::ProjectGetAllFailed,
-                    e.to_string()
-                ))))
+                Err(DBAccessError::QueryError(anyhow::anyhow!(
+                    get_error_message(ErrorKey::ProjectGetAllFailed, e.to_string())
+                )))
             }
         }
     }
@@ -234,10 +236,10 @@ impl ProjectRepository {
 
         match result {
             Some(project) => Ok(project),
-            None => Err(DBAccessError::NotFoundError(
-                get_error_message(ErrorKey::ProjectUpdateFailed,
-                format!("ID = {:?}", project.project_id)
-            )))
+            None => Err(DBAccessError::NotFoundError(get_error_message(
+                ErrorKey::ProjectUpdateFailed,
+                format!("ID = {:?}", project.project_id),
+            ))),
         }
     }
 

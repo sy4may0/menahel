@@ -29,5 +29,8 @@ pub fn add_repository_error_messages(
     let mut no_data_found_in_pagination = HashMap::new();
     no_data_found_in_pagination.insert("en", "No data found in pagination");
     no_data_found_in_pagination.insert("jp", "ページングにデータが見つかりません");
-    map.insert(ErrorKey::NoDataFoundInPagination, no_data_found_in_pagination);
+    map.insert(
+        ErrorKey::NoDataFoundInPagination,
+        no_data_found_in_pagination,
+    );
 }

@@ -142,6 +142,17 @@ pub fn validate_task_id(id: Option<i64>) -> Result<(), DBAccessError> {
     }
 }
 
+pub fn validate_task_id_is_none(id: Option<i64>) -> Result<(), DBAccessError> {
+    if id.is_none() {
+        return Ok(());
+    } else {
+        return Err(DBAccessError::ValidationError(get_error_message(
+            ErrorKey::TaskIdMustBeNone,
+            format!("ID = {}", id.unwrap()),
+        )));
+    }
+}
+
 pub fn validate_task_project_id(id: i64) -> Result<(), DBAccessError> {
     if id < 0 {
         return Err(DBAccessError::ValidationError(get_error_message(
@@ -256,6 +267,17 @@ pub fn validate_user_assign_id(id: Option<i64>) -> Result<(), DBAccessError> {
     }
 }
 
+pub fn validate_user_assign_id_is_none(id: Option<i64>) -> Result<(), DBAccessError> {
+    if id.is_none() {
+        return Ok(());
+    } else {
+        return Err(DBAccessError::ValidationError(get_error_message(
+            ErrorKey::UserAssignIdMustBeNone,
+            format!("ID = {}", id.unwrap()),
+        )));
+    }
+}
+
 pub fn validate_user_assign_user_id(id: i64) -> Result<(), DBAccessError> {
     if id < 0 {
         return Err(DBAccessError::ValidationError(get_error_message(
@@ -318,7 +340,38 @@ pub fn validate_comment_content(content: &str) -> Result<(), DBAccessError> {
     Ok(())
 }
 
-pub fn validate_pagination(page: Option<&i32>, page_size: Option<&i32>, max_count: &i64) -> Result<(), DBAccessError> {
+pub fn validate_comment_id(id: Option<i64>) -> Result<(), DBAccessError> {
+    let id = match id {
+        Some(id) => id,
+        None => return Ok(()),
+    };
+
+    if id < 0 {
+        return Err(DBAccessError::ValidationError(get_error_message(
+            ErrorKey::CommentIdInvalid,
+            format!("ID = {}", id),
+        )));
+    }
+
+    Ok(())
+}
+
+pub fn validate_comment_id_is_none(id: Option<i64>) -> Result<(), DBAccessError> {
+    if id.is_none() {
+        return Ok(());
+    } else {
+        return Err(DBAccessError::ValidationError(get_error_message(
+            ErrorKey::CommentIdMustBeNone,
+            format!("ID = {}", id.unwrap()),
+        )));
+    }
+}
+
+pub fn validate_pagination(
+    page: Option<&i32>,
+    page_size: Option<&i32>,
+    max_count: &i64,
+) -> Result<(), DBAccessError> {
     if page.is_none() && page_size.is_some() {
         return Err(DBAccessError::ValidationError(get_error_message(
             ErrorKey::NoPageSpecified,

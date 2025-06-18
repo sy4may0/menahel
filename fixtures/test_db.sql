@@ -84,3 +84,18 @@ INSERT INTO user_assign (user_assign_id, user_id, task_id) VALUES (6, 1, 3);
 INSERT INTO user_assign (user_assign_id, user_id, task_id) VALUES (7, 1, 4);
 INSERT INTO user_assign (user_assign_id, user_id, task_id) VALUES (8, 2, 2);
 INSERT INTO user_assign (user_assign_id, user_id, task_id) VALUES (9, 2, 10);
+
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (0, 2, 0, 'TestComment0', 1000, 1000);
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (1, 3, 0, 'TestComment1', 1000, 1000);
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (2, 4, 0, 'TestComment2', 1000, 1000);
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (3, 5, 0, 'TestComment3', 1000, 1000);
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (4, 6, 0, 'TestComment4', 1000, 1000);
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (5, 2, 1, 'TestComment5', 1000, 1000);
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (6, 3, 1, 'TestComment6', 1000, 1000);
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (7, 4, 1, 'TestComment7', 1000, 1000);
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (8, 2, 2, 'TestComment8', 1000, 1000);
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (9, 3, 2, 'TestComment9', 1000, 1000);
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (10, 4, 2, 'TestComment10', 1000, 1000);
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (11, 2, 3, 'TestComment11', 1000, 1000);
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (12, 3, 3, 'TestComment12', 1000, 1000);
+INSERT INTO comments (comment_id, task_id, user_id, content, created_at, updated_at) VALUES (13, 4, 3, 'TestComment13', 1000, 1000);

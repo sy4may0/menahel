@@ -1,5 +1,7 @@
 use crate::models::{User, UserFilter};
-use crate::repository::user_repo::{UserRepository, get_user_by_id_with_transaction, get_users_with_pagination_with_transaction};
+use crate::repository::user_repo::{
+    UserRepository, get_user_by_id_with_transaction, get_users_with_pagination_with_transaction,
+};
 use chrono::Utc;
 use sha2::{Digest, Sha256};
 use sqlx::sqlite::SqlitePool;
@@ -93,17 +95,12 @@ mod user_repo_test {
 
         let created_user = user_repo.create_user(user).await.unwrap();
 
-        let retrieved_user = user_repo
-            .get_user_by_name(&username)
-            .await
-            .unwrap();
+        let retrieved_user = user_repo.get_user_by_name(&username).await.unwrap();
         assert_eq!(retrieved_user.username, username);
         assert_eq!(retrieved_user.email, email);
         assert_eq!(retrieved_user.user_id, created_user.user_id);
 
-        let not_found_user = user_repo
-            .get_user_by_name("XXX_SUPER_UNCHI_XXX")
-            .await;
+        let not_found_user = user_repo.get_user_by_name("XXX_SUPER_UNCHI_XXX").await;
         assert!(not_found_user.is_err());
     }
 
@@ -810,7 +807,10 @@ mod user_repo_test {
             email: None,
         };
 
-        let users = get_users_with_pagination_with_transaction(&mut tx, None, None, Some(&filter), None).await.unwrap();
+        let users =
+            get_users_with_pagination_with_transaction(&mut tx, None, None, Some(&filter), None)
+                .await
+                .unwrap();
         assert_eq!(users.len(), 1);
         assert_eq!(users[0].username, "TestUser1");
     }
@@ -824,12 +824,17 @@ mod user_repo_test {
             email: None,
         };
 
-        let users = get_users_with_pagination_with_transaction(&mut tx, None, None, Some(&filter), None).await.unwrap();
+        let users =
+            get_users_with_pagination_with_transaction(&mut tx, None, None, Some(&filter), None)
+                .await
+                .unwrap();
         assert_eq!(users.len(), 0);
     }
 
     #[sqlx::test(fixtures("user"))]
-    async fn test_user_repo_get_users_with_pagination_with_transaction_with_pagination(pool: SqlitePool) {
+    async fn test_user_repo_get_users_with_pagination_with_transaction_with_pagination(
+        pool: SqlitePool,
+    ) {
         let mut tx = pool.begin().await.unwrap();
 
         let filter = UserFilter {
@@ -837,7 +842,15 @@ mod user_repo_test {
             email: None,
         };
 
-        let users = get_users_with_pagination_with_transaction(&mut tx, Some(&1), Some(&5), Some(&filter), None).await.unwrap();
+        let users = get_users_with_pagination_with_transaction(
+            &mut tx,
+            Some(&1),
+            Some(&5),
+            Some(&filter),
+            None,
+        )
+        .await
+        .unwrap();
         assert_eq!(users.len(), 5);
         assert_eq!(users[0].username, "TestUser0");
         assert_eq!(users[1].username, "TestUser1");
@@ -845,7 +858,15 @@ mod user_repo_test {
         assert_eq!(users[3].username, "TestUser3");
         assert_eq!(users[4].username, "TestUser4");
 
-        let users = get_users_with_pagination_with_transaction(&mut tx, Some(&2), Some(&5), Some(&filter), None).await.unwrap();
+        let users = get_users_with_pagination_with_transaction(
+            &mut tx,
+            Some(&2),
+            Some(&5),
+            Some(&filter),
+            None,
+        )
+        .await
+        .unwrap();
         assert_eq!(users.len(), 5);
         assert_eq!(users[0].username, "TestUser5");
         assert_eq!(users[1].username, "TestUser6");
@@ -855,7 +876,9 @@ mod user_repo_test {
     }
 
     #[sqlx::test(fixtures("user"))]
-    async fn test_user_repo_get_users_with_pagination_with_transaction_full_filter(pool: SqlitePool) {
+    async fn test_user_repo_get_users_with_pagination_with_transaction_full_filter(
+        pool: SqlitePool,
+    ) {
         let mut tx = pool.begin().await.unwrap();
 
         let filter = UserFilter {
@@ -863,14 +886,19 @@ mod user_repo_test {
             email: Some("test0@example.com".to_string()),
         };
 
-        let users = get_users_with_pagination_with_transaction(&mut tx, None, None, Some(&filter), None).await.unwrap();
+        let users =
+            get_users_with_pagination_with_transaction(&mut tx, None, None, Some(&filter), None)
+                .await
+                .unwrap();
         assert_eq!(users.len(), 1);
         assert_eq!(users[0].username, "TestUser0");
         assert_eq!(users[0].email, "test0@example.com");
     }
 
     #[sqlx::test(fixtures("user"))]
-    async fn test_user_repo_get_users_with_pagination_with_transaction_invalid_filter(pool: SqlitePool) {
+    async fn test_user_repo_get_users_with_pagination_with_transaction_invalid_filter(
+        pool: SqlitePool,
+    ) {
         let mut tx = pool.begin().await.unwrap();
 
         let filter = UserFilter {
@@ -878,12 +906,17 @@ mod user_repo_test {
             email: Some("test0xample.com".to_string()),
         };
 
-        let users = get_users_with_pagination_with_transaction(&mut tx, None, None, Some(&filter), None).await.unwrap();
+        let users =
+            get_users_with_pagination_with_transaction(&mut tx, None, None, Some(&filter), None)
+                .await
+                .unwrap();
         assert_eq!(users.len(), 0);
     }
 
     #[sqlx::test(fixtures("user"))]
-    async fn test_user_repo_get_users_with_pagination_with_transaction_with_task_ids(pool: SqlitePool) {
+    async fn test_user_repo_get_users_with_pagination_with_transaction_with_task_ids(
+        pool: SqlitePool,
+    ) {
         let mut tx = pool.begin().await.unwrap();
 
         let filter = UserFilter {
@@ -892,7 +925,15 @@ mod user_repo_test {
         };
 
         let task_ids = vec![3, 4];
-        let users = get_users_with_pagination_with_transaction(&mut tx, None, None, Some(&filter), Some(&task_ids)).await.unwrap();
+        let users = get_users_with_pagination_with_transaction(
+            &mut tx,
+            None,
+            None,
+            Some(&filter),
+            Some(&task_ids),
+        )
+        .await
+        .unwrap();
         assert_eq!(users.len(), 2);
         assert_eq!(users[0].username, "TestUser0");
         assert_eq!(users[1].username, "TestUser1");

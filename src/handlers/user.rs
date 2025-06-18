@@ -1,18 +1,18 @@
-use actix_web::{get, post, delete, web, HttpRequest, HttpResponse, Responder};
-use serde::Deserialize;
+use crate::errors::handler_errors::HandlerError;
+use crate::errors::messages::{ErrorKey, get_error_message};
+use crate::handlers::utils::get_request_id;
+use crate::handlers::utils::handle_error;
 use crate::handlers::utils::hash_password;
-use crate::models::response_model::UserResponse;
-use crate::models::response_model::ResponseMetadata;
+use crate::models::PaginationParams;
 use crate::models::response_model::ErrorResponse;
 use crate::models::response_model::Pagination;
 use crate::models::response_model::PaginationStatus;
-use crate::handlers::utils::get_request_id;
-use crate::models::PaginationParams;
-use crate::repository::user_repo::*;
-use crate::errors::handler_errors::HandlerError;
-use crate::errors::messages::{get_error_message, ErrorKey};
+use crate::models::response_model::ResponseMetadata;
+use crate::models::response_model::UserResponse;
 use crate::models::{User, UserNoPassword};
-use crate::handlers::utils::handle_error;
+use crate::repository::user_repo::*;
+use actix_web::{HttpRequest, HttpResponse, Responder, delete, get, post, web};
+use serde::Deserialize;
 use sqlx::sqlite::SqlitePool;
 
 enum QueryTarget {
@@ -27,9 +27,9 @@ impl QueryTarget {
             "all" => Ok(QueryTarget::All),
             "name" => Ok(QueryTarget::Name),
             "id" => Ok(QueryTarget::Id),
-            _ => Err(HandlerError::BadRequest(
-                get_error_message(ErrorKey::UserHandlerGetUsersInvalidTarget,
-                format!("target: {:?}", s)
+            _ => Err(HandlerError::BadRequest(get_error_message(
+                ErrorKey::UserHandlerGetUsersInvalidTarget,
+                format!("target: {:?}", s),
             ))),
         }
     }
@@ -43,8 +43,6 @@ struct GetUsersQuery {
     name: Option<String>,
     id: Option<i64>,
 }
-
-
 
 impl GetUsersQuery {
     fn target(&self) -> Result<QueryTarget, HandlerError> {
@@ -64,9 +62,9 @@ impl GetUsersQuery {
             QueryTarget::All => Ok(()),
             QueryTarget::Name => {
                 if self.name.is_none() {
-                    return Err(HandlerError::BadRequest(
-                        get_error_message(ErrorKey::UserHandlerGetUsersNoNameSpecified,
-                            "".to_string()
+                    return Err(HandlerError::BadRequest(get_error_message(
+                        ErrorKey::UserHandlerGetUsersNoNameSpecified,
+                        "".to_string(),
                     )));
                 }
                 Ok(())
@@ -74,9 +72,9 @@ impl GetUsersQuery {
 
             QueryTarget::Id => {
                 if self.id.is_none() {
-                    return Err(HandlerError::BadRequest(
-                        get_error_message(ErrorKey::UserHandlerGetUsersNoIdSpecified,
-                            "".to_string()
+                    return Err(HandlerError::BadRequest(get_error_message(
+                        ErrorKey::UserHandlerGetUsersNoIdSpecified,
+                        "".to_string(),
                     )));
                 }
                 Ok(())
@@ -87,36 +85,43 @@ impl GetUsersQuery {
 
 async fn get_users_with_pagination(
     pagination_params: &PaginationParams,
-    pool: SqlitePool
+    pool: SqlitePool,
 ) -> Result<Vec<UserNoPassword>, HandlerError> {
     let user_repo = UserRepository::new(pool.clone());
 
     match pagination_params.status() {
         PaginationStatus::Active => {
             // PaginationStatus::Activeの場合は、validate()でpageとpage_sizeがSomeであることが保証されている
-            log::debug!("Getting users with pagination: page: {:?}, page_size: {:?}", pagination_params.page(), pagination_params.page_size());
-            user_repo.get_users_with_pagination(
-                pagination_params.page().unwrap(), pagination_params.page_size().unwrap()
-            ).await.map_err(HandlerError::from)
+            log::debug!(
+                "Getting users with pagination: page: {:?}, page_size: {:?}",
+                pagination_params.page(),
+                pagination_params.page_size()
+            );
+            user_repo
+                .get_users_with_pagination(
+                    pagination_params.page().unwrap(),
+                    pagination_params.page_size().unwrap(),
+                )
+                .await
+                .map_err(HandlerError::from)
         }
         PaginationStatus::Inactive => {
             log::debug!("Getting all users");
-            user_repo.get_all_users().await
-                .map_err(HandlerError::from)
+            user_repo.get_all_users().await.map_err(HandlerError::from)
         }
-        PaginationStatus::Error => {
-            Err(HandlerError::BadRequest(
-                get_error_message(ErrorKey::UserHandlerGetUsersInvalidPage,
-                format!("page: {:?}, page_size: {:?}", pagination_params.page(), pagination_params.page_size())
-            )))
-        }
+        PaginationStatus::Error => Err(HandlerError::BadRequest(get_error_message(
+            ErrorKey::UserHandlerGetUsersInvalidPage,
+            format!(
+                "page: {:?}, page_size: {:?}",
+                pagination_params.page(),
+                pagination_params.page_size()
+            ),
+        ))),
     }
 }
 
 async fn get_all_users(req: HttpRequest, query: GetUsersQuery, pool: SqlitePool) -> HttpResponse {
-    let metadata = ResponseMetadata::new(
-        get_request_id(&req)
-    );
+    let metadata = ResponseMetadata::new(get_request_id(&req));
 
     let mut pagination_params = PaginationParams::new(query.page, query.page_size);
     pagination_params.validate();
@@ -148,10 +153,12 @@ async fn get_all_users(req: HttpRequest, query: GetUsersQuery, pool: SqlitePool)
     }
 }
 
-async fn get_user_by_name(req: HttpRequest, query: GetUsersQuery, pool: SqlitePool) -> HttpResponse {
-    let metadata = ResponseMetadata::new(
-        get_request_id(&req)
-    );
+async fn get_user_by_name(
+    req: HttpRequest,
+    query: GetUsersQuery,
+    pool: SqlitePool,
+) -> HttpResponse {
+    let metadata = ResponseMetadata::new(get_request_id(&req));
 
     let validated_query = match query.validate() {
         Ok(()) => query,
@@ -162,9 +169,10 @@ async fn get_user_by_name(req: HttpRequest, query: GetUsersQuery, pool: SqlitePo
     };
 
     let user_repo = UserRepository::new(pool.clone());
-    let user = user_repo.get_user_by_name(
-        validated_query.name.clone().unwrap().as_str()
-    ).await.map_err(HandlerError::from);
+    let user = user_repo
+        .get_user_by_name(validated_query.name.clone().unwrap().as_str())
+        .await
+        .map_err(HandlerError::from);
 
     match user {
         Ok(user) => {
@@ -180,9 +188,7 @@ async fn get_user_by_name(req: HttpRequest, query: GetUsersQuery, pool: SqlitePo
 }
 
 async fn get_user_by_id(req: HttpRequest, query: GetUsersQuery, pool: SqlitePool) -> HttpResponse {
-    let metadata = ResponseMetadata::new(
-        get_request_id(&req)
-    );
+    let metadata = ResponseMetadata::new(get_request_id(&req));
 
     let validated_query = match query.validate() {
         Ok(()) => query,
@@ -193,9 +199,10 @@ async fn get_user_by_id(req: HttpRequest, query: GetUsersQuery, pool: SqlitePool
     };
 
     let user_repo = UserRepository::new(pool.clone());
-    let user = user_repo.get_user_by_id(
-        validated_query.id.clone().unwrap()
-    ).await.map_err(HandlerError::from);
+    let user = user_repo
+        .get_user_by_id(validated_query.id.clone().unwrap())
+        .await
+        .map_err(HandlerError::from);
 
     match user {
         Ok(user) => {
@@ -212,16 +219,16 @@ async fn get_user_by_id(req: HttpRequest, query: GetUsersQuery, pool: SqlitePool
 
 #[get("/users")]
 pub async fn get_users(
-    req: HttpRequest, 
+    req: HttpRequest,
     query: Result<web::Query<GetUsersQuery>, actix_web::Error>,
-    pool: web::Data<SqlitePool>
+    pool: web::Data<SqlitePool>,
 ) -> impl Responder {
     let query = match query {
         Ok(query) => query.into_inner(),
         Err(e) => {
-            let error = HandlerError::BadRequest(
-                get_error_message(ErrorKey::UserHandlerInvalidQuery,
-                format!("ActixWebError: {}", e)
+            let error = HandlerError::BadRequest(get_error_message(
+                ErrorKey::UserHandlerInvalidQuery,
+                format!("ActixWebError: {}", e),
             ));
             let response = ErrorResponse::new(error.to_string(), 1, None);
             return handle_error(error, response);
@@ -234,8 +241,6 @@ pub async fn get_users(
             return handle_error(e, response);
         }
     };
-    
-
 
     match target {
         QueryTarget::All => get_all_users(req, query, pool.get_ref().clone()).await,
@@ -244,19 +249,20 @@ pub async fn get_users(
     }
 }
 
-
 #[post("/users")]
-pub async fn create_user(req: HttpRequest, user_data: Result<web::Json<User>, actix_web::Error>, pool: web::Data<SqlitePool>) -> HttpResponse {
-    let metadata = ResponseMetadata::new(
-        get_request_id(&req)
-    );
+pub async fn create_user(
+    req: HttpRequest,
+    user_data: Result<web::Json<User>, actix_web::Error>,
+    pool: web::Data<SqlitePool>,
+) -> HttpResponse {
+    let metadata = ResponseMetadata::new(get_request_id(&req));
 
     let user_data = match user_data {
         Ok(data) => data,
         Err(e) => {
-            let error = HandlerError::BadRequest(
-                get_error_message(ErrorKey::UserHandlerInvalidJsonPost,
-                format!("ActixWebError: {}", e)
+            let error = HandlerError::BadRequest(get_error_message(
+                ErrorKey::UserHandlerInvalidJsonPost,
+                format!("ActixWebError: {}", e),
             ));
             let response = ErrorResponse::new(error.to_string(), 1, Some(metadata));
             return handle_error(error, response);
@@ -272,8 +278,10 @@ pub async fn create_user(req: HttpRequest, user_data: Result<web::Json<User>, ac
     };
 
     let user_repo = UserRepository::new(pool.get_ref().clone());
-    let user = user_repo.create_user(
-        insert_user).await.map_err(HandlerError::from);
+    let user = user_repo
+        .create_user(insert_user)
+        .await
+        .map_err(HandlerError::from);
 
     match user {
         Ok(user) => {
@@ -289,21 +297,19 @@ pub async fn create_user(req: HttpRequest, user_data: Result<web::Json<User>, ac
 
 #[post("/users/{id}")]
 pub async fn update_user(
-    req: HttpRequest, 
-    user_data: Result<web::Json<User>, actix_web::Error>, 
-    path: Result<web::Path<i64>, actix_web::Error>, 
-    pool: web::Data<SqlitePool>
+    req: HttpRequest,
+    user_data: Result<web::Json<User>, actix_web::Error>,
+    path: Result<web::Path<i64>, actix_web::Error>,
+    pool: web::Data<SqlitePool>,
 ) -> HttpResponse {
-    let metadata = ResponseMetadata::new(
-        get_request_id(&req)
-    );
+    let metadata = ResponseMetadata::new(get_request_id(&req));
 
     let path = match path {
         Ok(path) => path.into_inner(),
         Err(e) => {
-            let error = HandlerError::BadRequest(
-                get_error_message(ErrorKey::UserHandlerInvalidPath,
-                format!("ActixWebError: {}", e)
+            let error = HandlerError::BadRequest(get_error_message(
+                ErrorKey::UserHandlerInvalidPath,
+                format!("ActixWebError: {}", e),
             ));
             let response = ErrorResponse::new(error.to_string(), 1, Some(metadata));
             return handle_error(error, response);
@@ -313,22 +319,26 @@ pub async fn update_user(
     let user_data = match user_data {
         Ok(data) => data,
         Err(e) => {
-            let error = HandlerError::BadRequest(
-                get_error_message(ErrorKey::UserHandlerInvalidJsonPost,
-                format!("ActixWebError: {}", e)
+            let error = HandlerError::BadRequest(get_error_message(
+                ErrorKey::UserHandlerInvalidJsonPost,
+                format!("ActixWebError: {}", e),
             ));
             let response = ErrorResponse::new(error.to_string(), 1, Some(metadata));
             return handle_error(error, response);
         }
     };
 
-
     let path_id = path;
 
-    if user_data.user_id.is_none() || (user_data.user_id.is_some() && user_data.user_id.unwrap() != path_id) {
-        let e = HandlerError::BadRequest(
-            get_error_message(ErrorKey::UserHandlerPathAndBodyIdMismatch,
-            format!("path.id: {:?}, user_data.id: {:?}", path_id, user_data.user_id)
+    if user_data.user_id.is_none()
+        || (user_data.user_id.is_some() && user_data.user_id.unwrap() != path_id)
+    {
+        let e = HandlerError::BadRequest(get_error_message(
+            ErrorKey::UserHandlerPathAndBodyIdMismatch,
+            format!(
+                "path.id: {:?}, user_data.id: {:?}",
+                path_id, user_data.user_id
+            ),
         ));
         let response = ErrorResponse::new(e.to_string(), 1, Some(metadata));
         return handle_error(e, response);
@@ -343,8 +353,11 @@ pub async fn update_user(
     };
 
     let user_repo = UserRepository::new(pool.get_ref().clone());
-    let user = user_repo.update_user(update_user).await.map_err(HandlerError::from);
-    
+    let user = user_repo
+        .update_user(update_user)
+        .await
+        .map_err(HandlerError::from);
+
     match user {
         Ok(user) => {
             let response = UserResponse::new(vec![user], 1, None, Some(metadata));
@@ -359,20 +372,18 @@ pub async fn update_user(
 
 #[delete("/users/{id}")]
 pub async fn delete_user(
-    req: HttpRequest, 
-    path: Result<web::Path<i64>, actix_web::Error>, 
-    pool: web::Data<SqlitePool>
+    req: HttpRequest,
+    path: Result<web::Path<i64>, actix_web::Error>,
+    pool: web::Data<SqlitePool>,
 ) -> HttpResponse {
-    let metadata = ResponseMetadata::new(
-        get_request_id(&req)
-    );
+    let metadata = ResponseMetadata::new(get_request_id(&req));
 
     let path = match path {
         Ok(path) => path.into_inner(),
         Err(e) => {
-            let error = HandlerError::BadRequest(
-                get_error_message(ErrorKey::UserHandlerInvalidPath,
-                format!("ActixWebError: {}", e)
+            let error = HandlerError::BadRequest(get_error_message(
+                ErrorKey::UserHandlerInvalidPath,
+                format!("ActixWebError: {}", e),
             ));
             let response = ErrorResponse::new(error.to_string(), 1, Some(metadata));
             return handle_error(error, response);
@@ -382,7 +393,10 @@ pub async fn delete_user(
     let path_id = path;
 
     let user_repo = UserRepository::new(pool.get_ref().clone());
-    let user = user_repo.delete_user(path_id).await.map_err(HandlerError::from);
+    let user = user_repo
+        .delete_user(path_id)
+        .await
+        .map_err(HandlerError::from);
 
     match user {
         Ok(()) => {

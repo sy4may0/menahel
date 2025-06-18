@@ -1,7 +1,9 @@
 use crate::enums::TaskLevel;
 use crate::enums::TaskStatus;
 use crate::models::{Task, task::TaskFilter};
-use crate::repository::task_repo::{TaskRepository, get_task_by_id_with_transaction, get_tasks_with_pagination_with_transaction};
+use crate::repository::task_repo::{
+    TaskRepository, get_task_by_id_with_transaction, get_tasks_with_pagination_with_transaction,
+};
 use chrono::Utc;
 use sqlx::sqlite::SqlitePool;
 
@@ -123,18 +125,22 @@ mod task_repo_test {
     #[sqlx::test(fixtures("tasks"))]
     async fn test_task_repo_get_tasks_by_filter_no_filter(pool: SqlitePool) {
         let task_repo = TaskRepository::new(pool);
-        let tasks = task_repo.get_tasks_by_filter(None, None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(None, None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 17);
     }
-
 
     #[sqlx::test(fixtures("tasks"))]
     async fn test_task_repo_get_tasks_by_no_filter_page_and_page_size(pool: SqlitePool) {
         let task_repo = TaskRepository::new(pool);
-        let tasks = task_repo.get_tasks_by_filter(None, Some(&1), Some(&10)).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(None, Some(&1), Some(&10))
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 10);
     }
-
 
     #[sqlx::test(fixtures("tasks"))]
     async fn test_task_repo_get_tasks_by_filter_and_pagination(pool: SqlitePool) {
@@ -154,7 +160,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), Some(&3), Some(&5)).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), Some(&3), Some(&5))
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 4);
         for task in tasks {
             assert_eq!(task.project_id, 2);
@@ -174,20 +183,26 @@ mod task_repo_test {
     #[sqlx::test(fixtures("tasks"))]
     async fn test_task_repo_get_tasks_by_invalid_pagination(pool: SqlitePool) {
         let task_repo = TaskRepository::new(pool);
-        let tasks = task_repo.get_tasks_by_filter(None, Some(&-1), Some(&5)).await;
+        let tasks = task_repo
+            .get_tasks_by_filter(None, Some(&-1), Some(&5))
+            .await;
         assert!(tasks.is_err());
 
-        let tasks = task_repo.get_tasks_by_filter(None, Some(&0), Some(&0)).await;
+        let tasks = task_repo
+            .get_tasks_by_filter(None, Some(&0), Some(&0))
+            .await;
         assert!(tasks.is_err());
     }
 
     #[sqlx::test(fixtures("tasks"))]
     async fn test_task_repo_get_tasks_by_long_page_size(pool: SqlitePool) {
         let task_repo = TaskRepository::new(pool);
-        let tasks = task_repo.get_tasks_by_filter(None, Some(&1), Some(&101)).await;
+        let tasks = task_repo
+            .get_tasks_by_filter(None, Some(&1), Some(&101))
+            .await;
         assert!(tasks.is_err());
     }
-    
+
     #[sqlx::test(fixtures("tasks"))]
     async fn test_task_repo_get_tasks_by_filter_project_id(pool: SqlitePool) {
         let task_repo = TaskRepository::new(pool);
@@ -206,7 +221,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 3);
         for task in tasks {
             assert_eq!(task.project_id, 1);
@@ -231,7 +249,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 1);
         assert_eq!(tasks[0].parent_id, Some(1));
     }
@@ -255,7 +276,10 @@ mod task_repo_test {
             assignee_id: None,
         };
 
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 2);
         for task in tasks {
             assert_eq!(task.level, TaskLevel::Minor.to_int());
@@ -280,7 +304,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 1);
         assert_eq!(tasks[0].name, "Test PJ0 Trivial TASK");
     }
@@ -303,7 +330,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 1);
         assert_eq!(
             tasks[0].description,
@@ -329,7 +359,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 6);
         for task in tasks {
             assert_eq!(task.status, TaskStatus::NotStarted.to_int());
@@ -354,7 +387,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 1);
         for task in tasks {
             assert!(task.deadline.is_some());
@@ -377,7 +413,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 2);
         for task in tasks {
             assert!(task.deadline.is_some());
@@ -399,7 +438,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 11);
         for task in tasks {
             assert!(task.deadline.is_some());
@@ -425,7 +467,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 1);
         assert!(tasks[0].created_at == 1000);
 
@@ -444,7 +489,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 2);
         for task in tasks {
             assert!(task.created_at >= 8000);
@@ -465,7 +513,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 15);
         for task in tasks {
             assert!(task.created_at <= 3000);
@@ -490,7 +541,10 @@ mod task_repo_test {
             updated_at_to: Some(1000),
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 1);
         assert!(tasks[0].updated_at.unwrap() == 1000);
 
@@ -509,7 +563,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 2);
         for task in tasks {
             assert!(task.updated_at.unwrap() >= 8000);
@@ -530,7 +587,10 @@ mod task_repo_test {
             updated_at_to: Some(3000),
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 1);
         assert!(tasks[0].updated_at.unwrap() <= 3000);
     }
@@ -553,7 +613,10 @@ mod task_repo_test {
             updated_at_to: Some(99999),
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 1);
         assert!(tasks[0].project_id == 2);
         assert!(tasks[0].parent_id.unwrap() == 5);
@@ -584,7 +647,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 17);
     }
 
@@ -606,7 +672,10 @@ mod task_repo_test {
             updated_at_to: Some(99999),
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 0);
     }
 
@@ -837,7 +906,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 0);
     }
 
@@ -859,7 +931,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 0);
     }
 
@@ -881,7 +956,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 0);
     }
 
@@ -903,7 +981,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 0);
     }
 
@@ -925,7 +1006,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 0);
     }
 
@@ -947,7 +1031,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 0);
     }
 
@@ -969,7 +1056,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 0);
     }
 
@@ -991,7 +1081,10 @@ mod task_repo_test {
             updated_at_to: None,
             assignee_id: None,
         };
-        let tasks = task_repo.get_tasks_by_filter(Some(&filter), None, None).await.unwrap();
+        let tasks = task_repo
+            .get_tasks_by_filter(Some(&filter), None, None)
+            .await
+            .unwrap();
         assert_eq!(tasks.len(), 0);
     }
 
@@ -999,9 +1092,7 @@ mod task_repo_test {
     async fn test_task_repo_get_task_by_id_with_transaction(pool: SqlitePool) {
         let mut tx = pool.begin().await.unwrap();
 
-        let task = get_task_by_id_with_transaction(1, &mut tx)
-            .await
-            .unwrap();
+        let task = get_task_by_id_with_transaction(1, &mut tx).await.unwrap();
         assert_eq!(task.task_id, Some(1));
     }
 
@@ -1038,7 +1129,9 @@ mod task_repo_test {
             None,
             Some(&filter),
             Some(&user_ids),
-        ).await.unwrap();
+        )
+        .await
+        .unwrap();
 
         assert_eq!(tasks.len(), 2);
         assert_eq!(tasks[0].task_id, Some(15));

@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
-use crate::models::{Comment, CommentWithUser};
 use super::common_models::{Pagination, ResponseMetadata};
+use crate::models::{Comment, CommentWithUser};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CommentResponse {
@@ -13,8 +13,20 @@ pub struct CommentResponse {
 }
 
 impl CommentResponse {
-    pub fn new(results: Vec<Comment>, count: i64, pagination: Option<Pagination>, metadata: Option<ResponseMetadata>) -> Self {
-        Self { results, count, rc: 0, message: "OK".to_string(), pagination, metadata }
+    pub fn new(
+        results: Vec<Comment>,
+        count: i64,
+        pagination: Option<Pagination>,
+        metadata: Option<ResponseMetadata>,
+    ) -> Self {
+        Self {
+            results,
+            count,
+            rc: 0,
+            message: "OK".to_string(),
+            pagination,
+            metadata,
+        }
     }
 }
 
@@ -29,7 +41,19 @@ pub struct CommentUserResponse {
 }
 
 impl CommentUserResponse {
-    pub fn new(results: Vec<CommentWithUser>, count: i64, pagination: Option<Pagination>, metadata: Option<ResponseMetadata>) -> Self {
-        Self { results, count, rc: 0, message: "OK".to_string(), pagination, metadata }
+    pub fn new(
+        results: Vec<CommentWithUser>,
+        count: i64,
+        pagination: Option<Pagination>,
+        metadata: Option<ResponseMetadata>,
+    ) -> Self {
+        Self {
+            results,
+            count,
+            rc: 0,
+            message: "OK".to_string(),
+            pagination,
+            metadata,
+        }
     }
 }

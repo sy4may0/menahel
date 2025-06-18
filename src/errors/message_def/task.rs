@@ -2,14 +2,17 @@ use std::collections::HashMap;
 
 use crate::errors::messages::ErrorKey;
 
-pub fn add_task_error_messages(
-    map: &mut HashMap<ErrorKey, HashMap<&'static str, &'static str>>,
-) {
+pub fn add_task_error_messages(map: &mut HashMap<ErrorKey, HashMap<&'static str, &'static str>>) {
     // タスク関連のエラーメッセージ
     let mut task_id_invalid = HashMap::new();
     task_id_invalid.insert("en", "Task ID must be greater than 0");
     task_id_invalid.insert("jp", "タスクIDは0より大きくなければなりません");
     map.insert(ErrorKey::TaskIdInvalid, task_id_invalid);
+
+    let mut task_id_must_be_none = HashMap::new();
+    task_id_must_be_none.insert("en", "Task ID must be none");
+    task_id_must_be_none.insert("jp", "タスクIDはnullでなければなりません");
+    map.insert(ErrorKey::TaskIdMustBeNone, task_id_must_be_none);
 
     let mut task_project_id_invalid = HashMap::new();
     task_project_id_invalid.insert("en", "Project ID must be greater than 0");
@@ -71,8 +74,7 @@ pub fn add_task_error_messages(
     map.insert(ErrorKey::TaskProjectIdNotFound, task_project_id_not_found);
 
     let mut task_no_parent_id_on_non_major_task = HashMap::new();
-    task_no_parent_id_on_non_major_task
-        .insert("en", "Parent ID is required for non-major tasks");
+    task_no_parent_id_on_non_major_task.insert("en", "Parent ID is required for non-major tasks");
     task_no_parent_id_on_non_major_task
         .insert("jp", "大項目タスク以外のタスクには親タスクIDが必要です");
     map.insert(
@@ -93,8 +95,7 @@ pub fn add_task_error_messages(
     let mut task_parent_id_cannot_be_same_as_task_id = HashMap::new();
     task_parent_id_cannot_be_same_as_task_id
         .insert("en", "Parent ID cannot be the same as the task ID");
-    task_parent_id_cannot_be_same_as_task_id
-        .insert("jp", "親タスクIDはタスクIDと同じにできません");
+    task_parent_id_cannot_be_same_as_task_id.insert("jp", "親タスクIDはタスクIDと同じにできません");
     map.insert(
         ErrorKey::TaskParentIdCannotBeSameAsTaskId,
         task_parent_id_cannot_be_same_as_task_id,
@@ -171,19 +172,22 @@ pub fn add_task_error_messages(
         "en",
         "Failed to get count of tasks due to database operation failure",
     );
-    task_get_count_failed.insert("jp", "DB操作処理の問題によりタスクの件数の取得に失敗しました");
+    task_get_count_failed.insert(
+        "jp",
+        "DB操作処理の問題によりタスクの件数の取得に失敗しました",
+    );
     map.insert(ErrorKey::TaskGetCountFailed, task_get_count_failed);
 
     let mut task_get_pagination_not_found = HashMap::new();
-    task_get_pagination_not_found.insert(
-        "en",
-        "No tasks found in the specified page",
-    );
+    task_get_pagination_not_found.insert("en", "No tasks found in the specified page");
     task_get_pagination_not_found.insert("jp", "指定ページ内にタスクが存在しません。");
-    map.insert(ErrorKey::TaskGetPaginationNotFound, task_get_pagination_not_found);
+    map.insert(
+        ErrorKey::TaskGetPaginationNotFound,
+        task_get_pagination_not_found,
+    );
 
     let mut task_get_by_id_not_found = HashMap::new();
     task_get_by_id_not_found.insert("en", "Task not found");
     task_get_by_id_not_found.insert("jp", "タスクが見つかりません");
     map.insert(ErrorKey::TaskGetByIdNotFound, task_get_by_id_not_found);
-} 
+}

@@ -1,10 +1,9 @@
-use actix_web::HttpRequest;
-use uuid::Uuid;
 use crate::errors::handler_errors::HandlerError;
 use crate::models::ErrorResponse;
+use actix_web::HttpRequest;
 use actix_web::HttpResponse;
-use sha2::{Sha256, Digest};
-
+use sha2::{Digest, Sha256};
+use uuid::Uuid;
 
 pub fn get_request_id(req: &HttpRequest) -> String {
     // クライアントから送信されたリクエストIDを取得

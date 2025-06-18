@@ -1,8 +1,7 @@
-use serde::{Deserialize, Serialize};
 use crate::models::project::Project;
 use crate::models::response_model::Pagination;
 use crate::models::response_model::ResponseMetadata;
-
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectResponse {
@@ -15,7 +14,12 @@ pub struct ProjectResponse {
 }
 
 impl ProjectResponse {
-    pub fn new(results: Vec<Project>, count: i64, pagenation: Option<Pagination>, metadata: Option<ResponseMetadata>) -> Self {
+    pub fn new(
+        results: Vec<Project>,
+        count: i64,
+        pagenation: Option<Pagination>,
+        metadata: Option<ResponseMetadata>,
+    ) -> Self {
         Self {
             results,
             count,

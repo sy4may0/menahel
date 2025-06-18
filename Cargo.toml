@@ -29,3 +29,6 @@ serde_yaml = "0.9"
 rand = "0.8"
 ctor = "0.2.5"
 
+[[bin]]
+name = "menahel-client"
+path = "src/bin/client.rs"

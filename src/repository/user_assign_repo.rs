@@ -4,9 +4,12 @@ use crate::errors::messages::{ErrorKey, get_error_message};
 use crate::models::{UserAssign, UserAssignFilter};
 use crate::repository::task_repo::get_task_by_id_with_transaction;
 use crate::repository::user_repo::get_user_by_id_with_transaction;
-use crate::repository::validations::{validate_pagination, validate_user_assign_id, validate_user_assign_task_id, validate_user_assign_user_id};
-use sqlx::{Pool, Sqlite, Transaction};
+use crate::repository::validations::{
+    validate_pagination, validate_user_assign_id, validate_user_assign_id_is_none,
+    validate_user_assign_task_id, validate_user_assign_user_id,
+};
 use anyhow::Result;
+use sqlx::{Pool, Sqlite, Transaction};
 use std::collections::HashMap;
 
 pub struct UserAssignRepository {
@@ -72,6 +75,7 @@ impl UserAssignRepository {
         &self,
         user_assign: UserAssign,
     ) -> Result<UserAssign, DBAccessError> {
+        validate_user_assign_id_is_none(user_assign.user_assign_id)?;
         validate_user_assign_user_id(user_assign.user_id)?;
         validate_user_assign_task_id(user_assign.task_id)?;
 
@@ -117,10 +121,7 @@ impl UserAssignRepository {
         }
     }
 
-    pub async fn get_user_assign_by_id(
-        &self,
-        id: i64,
-    ) -> Result<UserAssign, DBAccessError> {
+    pub async fn get_user_assign_by_id(&self, id: i64) -> Result<UserAssign, DBAccessError> {
         let result = sqlx::query_as!(
             UserAssign,
             r#"
@@ -194,7 +195,7 @@ impl UserAssignRepository {
         page: &i32,
         page_size: &i32,
     ) -> Result<Vec<UserAssign>, DBAccessError> {
-         let mut tx = self.pool.begin().await.map_err(|e| {
+        let mut tx = self.pool.begin().await.map_err(|e| {
             DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
                 ErrorKey::UserAssignGetAllFailed,
                 e.to_string()
@@ -202,12 +203,15 @@ impl UserAssignRepository {
         })?;
         let count = get_user_assigns_count_with_transaction(&mut tx, None).await?;
 
-
         validate_pagination(Some(page), Some(page_size), &count)?;
         let offset = (page - 1) * page_size;
         let limit = page_size;
-        
-        log::debug!("Get user assigns with pagination: offset: {}, limit: {}", offset, limit);
+
+        log::debug!(
+            "Get user assigns with pagination: offset: {}, limit: {}",
+            offset,
+            limit
+        );
 
         let result = sqlx::query_as!(
             UserAssign,
@@ -256,11 +260,12 @@ impl UserAssignRepository {
         page: Option<&i32>,
         page_size: Option<&i32>,
     ) -> Result<Vec<UserAssign>, DBAccessError> {
-
-        let mut query = String::from(r#"
+        let mut query = String::from(
+            r#"
             SELECT user_assign_id, user_id, task_id
             FROM user_assign
-        "#);
+        "#,
+        );
         let mut page_bind_values: Vec<i32> = Vec::new();
         let mut filter_bind_values: Vec<FilterValue> = Vec::new();
 
@@ -286,7 +291,7 @@ impl UserAssignRepository {
         let count = get_user_assigns_count_with_transaction(&mut tx, filter).await?;
         validate_pagination(page, page_size, &count)?;
         if page.is_some() && page_size.is_some() {
-           let page = page.unwrap();
+            let page = page.unwrap();
             let page_size = page_size.unwrap();
             let offset = (*page - 1) * *page_size;
             let limit = *page_size;
@@ -531,7 +536,10 @@ pub async fn get_user_assign_by_user_id_and_task_id_with_transaction(
             e.to_string()
         )))
     })?;
-    log::debug!("Get user assign by user id and task id with transaction: {:?}", result);
+    log::debug!(
+        "Get user assign by user id and task id with transaction: {:?}",
+        result
+    );
 
     match result {
         Some(user_assign) => Ok(user_assign),
@@ -566,16 +574,27 @@ pub async fn get_user_assigns_count_with_transaction(
                 }
             }
 
-            let count = query_builder.fetch_one(&mut **transaction)
-            .await
-            .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserAssignGetUserAssignsCountFailed, e.to_string()))))?;
+            let count = query_builder
+                .fetch_one(&mut **transaction)
+                .await
+                .map_err(|e| {
+                    DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                        ErrorKey::UserAssignGetUserAssignsCountFailed,
+                        e.to_string()
+                    )))
+                })?;
             count
         }
         None => {
             let count = sqlx::query_scalar::<_, i64>(&query)
-            .fetch_one(&mut **transaction)
-            .await
-            .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserAssignGetUserAssignsCountFailed, e.to_string()))))?;
+                .fetch_one(&mut **transaction)
+                .await
+                .map_err(|e| {
+                    DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                        ErrorKey::UserAssignGetUserAssignsCountFailed,
+                        e.to_string()
+                    )))
+                })?;
             count
         }
     };
@@ -601,7 +620,10 @@ fn build_where_clause(filter: &UserAssignFilter) -> (String, Vec<FilterValue>) {
     }
 
     if !where_calses.is_empty() {
-        (format!(" WHERE {}", where_calses.join(" AND ")), bind_values)
+        (
+            format!(" WHERE {}", where_calses.join(" AND ")),
+            bind_values,
+        )
     } else {
         ("".to_string(), bind_values)
     }
@@ -632,21 +654,31 @@ pub async fn get_related_task_ids_by_user_ids(
             r#"
                 SELECT user_assign_id, user_id, task_id FROM user_assign WHERE user_id IN ({})
         "#,
-        placeholder.join(",")
-    )};
+            placeholder.join(",")
+        ),
+    };
     let mut query_builder = sqlx::query_as::<_, UserAssign>(&query);
 
     for user_id in user_ids {
         query_builder = query_builder.bind(user_id);
     }
 
-    let result = query_builder.fetch_all(&mut **transaction)
-    .await
-    .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserAssignGetByUserIdFailed, e.to_string()))))?;
+    let result = query_builder
+        .fetch_all(&mut **transaction)
+        .await
+        .map_err(|e| {
+            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::UserAssignGetByUserIdFailed,
+                e.to_string()
+            )))
+        })?;
 
     let mut task_ids_map: HashMap<i64, Vec<i64>> = HashMap::new();
     for user_assign in result {
-        task_ids_map.entry(user_assign.user_id).or_insert(Vec::new()).push(user_assign.task_id);
+        task_ids_map
+            .entry(user_assign.user_id)
+            .or_insert(Vec::new())
+            .push(user_assign.task_id);
     }
 
     Ok(task_ids_map)
@@ -664,24 +696,34 @@ pub async fn get_related_user_ids_by_task_ids(
     let query = match task_ids.len() {
         0 => return Ok(HashMap::new()),
         _ => format!(
-        r#"
+            r#"
             SELECT user_assign_id, task_id, user_id FROM user_assign WHERE task_id IN ({})
         "#,
-        placeholder.join(",")
-    )};
+            placeholder.join(",")
+        ),
+    };
     let mut query_builder = sqlx::query_as::<_, UserAssign>(&query);
 
     for task_id in task_ids {
         query_builder = query_builder.bind(task_id);
     }
 
-    let result = query_builder.fetch_all(&mut **transaction)
-    .await
-    .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(ErrorKey::UserAssignGetByTaskIdFailed, e.to_string()))))?;
+    let result = query_builder
+        .fetch_all(&mut **transaction)
+        .await
+        .map_err(|e| {
+            DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                ErrorKey::UserAssignGetByTaskIdFailed,
+                e.to_string()
+            )))
+        })?;
 
     let mut user_ids_map: HashMap<i64, Vec<i64>> = HashMap::new();
     for user_assign in result {
-        user_ids_map.entry(user_assign.task_id).or_insert(Vec::new()).push(user_assign.user_id);
+        user_ids_map
+            .entry(user_assign.task_id)
+            .or_insert(Vec::new())
+            .push(user_assign.user_id);
     }
 
     Ok(user_ids_map)

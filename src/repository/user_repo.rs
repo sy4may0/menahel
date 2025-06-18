@@ -3,7 +3,8 @@ use crate::errors::messages::{ErrorKey, get_error_message};
 use crate::models::user::UserFilter;
 use crate::models::{User, UserNoPassword};
 use crate::repository::validations::{
-    validate_pagination, validate_user_email, validate_user_id, validate_user_id_is_none, validate_user_name, validate_user_password
+    validate_pagination, validate_user_email, validate_user_id, validate_user_id_is_none,
+    validate_user_name, validate_user_password,
 };
 use sqlx::{Pool, Sqlite, Transaction};
 
@@ -18,7 +19,10 @@ enum FilterValue {
 }
 
 fn users_to_users_no_password(users: Vec<User>) -> Vec<UserNoPassword> {
-    users.into_iter().map(|user| user.to_user_no_password()).collect()
+    users
+        .into_iter()
+        .map(|user| user.to_user_no_password())
+        .collect()
 }
 
 fn deduplicate(users: Vec<User>) -> Vec<User> {
@@ -92,7 +96,7 @@ impl UserRepository {
             None => Err(DBAccessError::NotFoundError(get_error_message(
                 ErrorKey::UserGetByIdNotFound,
                 format!("ID = {}", id),
-            )))
+            ))),
         }
     }
 
@@ -121,7 +125,7 @@ impl UserRepository {
             None => Err(DBAccessError::NotFoundError(get_error_message(
                 ErrorKey::UserGetByNameNotFound,
                 format!("Name = {}", name),
-            )))
+            ))),
         }
     }
 
@@ -188,7 +192,11 @@ impl UserRepository {
                 format!("Offset: {}, Count: {}", offset, count),
             )));
         }
-        log::debug!("Get users with pagination: offset: {}, limit: {}", offset, limit);
+        log::debug!(
+            "Get users with pagination: offset: {}, limit: {}",
+            offset,
+            limit
+        );
 
         let result = sqlx::query_as!(
             User,
@@ -284,7 +292,7 @@ impl UserRepository {
             None => Err(DBAccessError::NotFoundError(get_error_message(
                 ErrorKey::UserGetByIdNotFound,
                 format!("ID = {:?}", user.user_id),
-            )))
+            ))),
         }
     }
 
@@ -329,10 +337,12 @@ fn build_where_clause(
     let mut index = 1;
     if filter.username.is_some() {
         where_calses.push(format!("username = ${}", index));
-        bind_values.push(FilterValue::String(filter.username.as_ref().unwrap().clone()));
+        bind_values.push(FilterValue::String(
+            filter.username.as_ref().unwrap().clone(),
+        ));
         index += 1;
     }
-    
+
     if filter.email.is_some() {
         where_calses.push(format!("email = ${}", index));
         bind_values.push(FilterValue::String(filter.email.as_ref().unwrap().clone()));
@@ -347,13 +357,18 @@ fn build_where_clause(
             bind_values.push(FilterValue::I64(*id));
             id_idx += 1;
         }
-        where_calses.push(format!("user_assign.task_id IN({})", id_placeholders.join(",")));
+        where_calses.push(format!(
+            "user_assign.task_id IN({})",
+            id_placeholders.join(",")
+        ));
     }
 
-    if !where_calses.is_empty() {(
-        format!(" WHERE {}", where_calses.join(" AND ")),
-        bind_values
-    )} else {
+    if !where_calses.is_empty() {
+        (
+            format!(" WHERE {}", where_calses.join(" AND ")),
+            bind_values,
+        )
+    } else {
         (String::new(), bind_values)
     }
 }
@@ -396,7 +411,7 @@ pub async fn get_user_by_id_with_transaction(
         None => Err(DBAccessError::NotFoundError(get_error_message(
             ErrorKey::UserGetByIdNotFound,
             format!("ID = {}", id),
-        )))
+        ))),
     }
 }
 
@@ -405,14 +420,18 @@ pub async fn get_users_count_with_transaction(
     filter: Option<&UserFilter>,
     task_ids: Option<&Vec<i64>>,
 ) -> Result<i64, DBAccessError> {
-    let mut query = String::from(r#"
+    let mut query = String::from(
+        r#"
         SELECT COUNT(*) FROM users
-    "#);
+    "#,
+    );
 
     if task_ids.is_some() && task_ids.unwrap().len() > 0 {
-        query.push_str(r#"
+        query.push_str(
+            r#"
             INNER JOIN user_assign ON users.user_id = user_assign.user_id
-        "#);
+        "#,
+        );
     }
 
     let result = match filter {
@@ -432,22 +451,24 @@ pub async fn get_users_count_with_transaction(
                 }
             }
 
-            let count = query_builder.fetch_one(&mut **tx)
-            .await
-            .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
-                ErrorKey::UserGetUsersCountFailed,
-                e.to_string()
-            ))))?;
+            let count = query_builder.fetch_one(&mut **tx).await.map_err(|e| {
+                DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                    ErrorKey::UserGetUsersCountFailed,
+                    e.to_string()
+                )))
+            })?;
             count
-        },
+        }
         None => {
             let count = sqlx::query_scalar::<_, i64>(&query)
-            .fetch_one(&mut **tx)
-            .await
-            .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
-                ErrorKey::UserGetUsersCountFailed,
-                e.to_string()
-            ))))?;
+                .fetch_one(&mut **tx)
+                .await
+                .map_err(|e| {
+                    DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+                        ErrorKey::UserGetUsersCountFailed,
+                        e.to_string()
+                    )))
+                })?;
             count
         }
     };
@@ -455,7 +476,6 @@ pub async fn get_users_count_with_transaction(
     log::debug!("Get users count with transaction: {:?}", result);
 
     Ok(result)
-
 }
 
 pub async fn get_users_with_pagination_with_transaction(
@@ -465,18 +485,21 @@ pub async fn get_users_with_pagination_with_transaction(
     filter: Option<&UserFilter>,
     task_ids: Option<&Vec<i64>>,
 ) -> Result<Vec<UserNoPassword>, DBAccessError> {
-
-    let mut query = String::from(r#"
+    let mut query = String::from(
+        r#"
         SELECT users.user_id, users.username, users.email, users.password_hash
         FROM users
-    "#);
+    "#,
+    );
     let mut page_bind_values: Vec<i32> = Vec::new();
     let mut filter_bind_values: Vec<FilterValue> = Vec::new();
 
     if task_ids.is_some() && task_ids.unwrap().len() > 0 {
-        query.push_str(r#"
+        query.push_str(
+            r#"
             INNER JOIN user_assign ON users.user_id = user_assign.user_id
-        "#);
+        "#,
+        );
     }
 
     // クエリのバインド値のインデックス
@@ -491,9 +514,7 @@ pub async fn get_users_with_pagination_with_transaction(
         if validate_filter(unwrapped_filter).is_err() {
             return Ok(Vec::new());
         }
-        let (where_clause, bind_values) = build_where_clause(
-            unwrapped_filter, task_ids
-        );
+        let (where_clause, bind_values) = build_where_clause(unwrapped_filter, task_ids);
         query.push_str(&format!(" {}", where_clause));
 
         // クエリのバインド値のインデックスを更新
@@ -507,7 +528,7 @@ pub async fn get_users_with_pagination_with_transaction(
     let count = get_users_count_with_transaction(tx, filter, task_ids).await?;
     validate_pagination(page, page_size, &count)?;
     if page.is_some() && page_size.is_some() {
-       let page = page.unwrap();
+        let page = page.unwrap();
         let page_size = page_size.unwrap();
         let offset = (*page - 1) * *page_size;
         let limit = *page_size;
@@ -536,11 +557,12 @@ pub async fn get_users_with_pagination_with_transaction(
         }
     }
 
-    let result = query_builder.fetch_all(&mut **tx).await
-    .map_err(|e| DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
-        ErrorKey::UserGetUsersPaginationNotFound,
-        e.to_string()
-    ))))?;
+    let result = query_builder.fetch_all(&mut **tx).await.map_err(|e| {
+        DBAccessError::QueryError(anyhow::anyhow!(get_error_message(
+            ErrorKey::UserGetUsersPaginationNotFound,
+            e.to_string()
+        )))
+    })?;
 
     log::debug!("Get users with pagination: {:?}", result);
 

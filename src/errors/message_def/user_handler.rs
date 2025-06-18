@@ -30,38 +30,61 @@ pub fn add_user_handler_error_messages(
     map.insert(ErrorKey::UserGetByNameNotFound, user_get_by_name_not_found);
 
     let mut user_handler_get_users_invalid_target = HashMap::new();
-    user_handler_get_users_invalid_target.insert("en", "Invalid target. Target must be 'all', 'name', or 'id'");
-    user_handler_get_users_invalid_target.insert("jp", "ターゲットが無効です。ターゲットは'all'、'name'、または'id'である必要があります");
-    map.insert(ErrorKey::UserHandlerGetUsersInvalidTarget, user_handler_get_users_invalid_target);
+    user_handler_get_users_invalid_target.insert(
+        "en",
+        "Invalid target. Target must be 'all', 'name', or 'id'",
+    );
+    user_handler_get_users_invalid_target.insert(
+        "jp",
+        "ターゲットが無効です。ターゲットは'all'、'name'、または'id'である必要があります",
+    );
+    map.insert(
+        ErrorKey::UserHandlerGetUsersInvalidTarget,
+        user_handler_get_users_invalid_target,
+    );
 
     let mut user_handler_get_users_no_name_specified = HashMap::new();
     user_handler_get_users_no_name_specified.insert("en", "Name is not specified");
     user_handler_get_users_no_name_specified.insert("jp", "名前が指定されていません");
-    map.insert(ErrorKey::UserHandlerGetUsersNoNameSpecified, user_handler_get_users_no_name_specified);
+    map.insert(
+        ErrorKey::UserHandlerGetUsersNoNameSpecified,
+        user_handler_get_users_no_name_specified,
+    );
 
     let mut user_handler_get_users_no_id_specified = HashMap::new();
     user_handler_get_users_no_id_specified.insert("en", "ID is not specified");
     user_handler_get_users_no_id_specified.insert("jp", "IDが指定されていません");
-    map.insert(ErrorKey::UserHandlerGetUsersNoIdSpecified, user_handler_get_users_no_id_specified);
+    map.insert(
+        ErrorKey::UserHandlerGetUsersNoIdSpecified,
+        user_handler_get_users_no_id_specified,
+    );
 
     let mut user_handler_path_and_body_id_mismatch = HashMap::new();
     user_handler_path_and_body_id_mismatch.insert("en", "Path ID and body ID mismatch");
     user_handler_path_and_body_id_mismatch.insert("jp", "パスIDとボディIDが一致しません");
-    map.insert(ErrorKey::UserHandlerPathAndBodyIdMismatch, user_handler_path_and_body_id_mismatch);
+    map.insert(
+        ErrorKey::UserHandlerPathAndBodyIdMismatch,
+        user_handler_path_and_body_id_mismatch,
+    );
 
     let mut user_handler_invalid_json_post = HashMap::new();
     user_handler_invalid_json_post.insert("en", "Invalid JSON format");
     user_handler_invalid_json_post.insert("jp", "JSON形式が無効です");
-    map.insert(ErrorKey::UserHandlerInvalidJsonPost, user_handler_invalid_json_post);
+    map.insert(
+        ErrorKey::UserHandlerInvalidJsonPost,
+        user_handler_invalid_json_post,
+    );
 
     let mut user_handler_invalid_query = HashMap::new();
     user_handler_invalid_query.insert("en", "Invalid query");
     user_handler_invalid_query.insert("jp", "クエリが無効です");
-    map.insert(ErrorKey::UserHandlerInvalidQuery, user_handler_invalid_query);
+    map.insert(
+        ErrorKey::UserHandlerInvalidQuery,
+        user_handler_invalid_query,
+    );
 
     let mut user_handler_invalid_path = HashMap::new();
     user_handler_invalid_path.insert("en", "Invalid path");
     user_handler_invalid_path.insert("jp", "パスが無効です");
     map.insert(ErrorKey::UserHandlerInvalidPath, user_handler_invalid_path);
-
 }

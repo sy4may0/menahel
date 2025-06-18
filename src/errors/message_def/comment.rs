@@ -6,6 +6,16 @@ pub fn add_comment_error_messages(
     map: &mut HashMap<ErrorKey, HashMap<&'static str, &'static str>>,
 ) {
     // コメント関連のエラーメッセージ
+    let mut comment_id_invalid = HashMap::new();
+    comment_id_invalid.insert("en", "Comment ID must be greater than 0");
+    comment_id_invalid.insert("jp", "コメントIDは0より大きくなければなりません");
+    map.insert(ErrorKey::CommentIdInvalid, comment_id_invalid);
+
+    let mut comment_id_must_be_none = HashMap::new();
+    comment_id_must_be_none.insert("en", "Comment ID must be none");
+    comment_id_must_be_none.insert("jp", "コメントIDはnullでなければなりません");
+    map.insert(ErrorKey::CommentIdMustBeNone, comment_id_must_be_none);
+
     let mut comment_create_failed = HashMap::new();
     comment_create_failed.insert(
         "en",
@@ -116,6 +126,11 @@ pub fn add_comment_error_messages(
     comment_task_id_invalid.insert("jp", "タスクIDは0より大きくなければなりません");
     map.insert(ErrorKey::CommentTaskIdInvalid, comment_task_id_invalid);
 
+    let mut comment_id_not_found = HashMap::new();
+    comment_id_not_found.insert("en", "Comment not found");
+    comment_id_not_found.insert("jp", "コメントが見つかりません");
+    map.insert(ErrorKey::CommentIdNotFound, comment_id_not_found);
+
     let mut comment_user_id_not_found = HashMap::new();
     comment_user_id_not_found.insert("en", "The user comment does not exist");
     comment_user_id_not_found.insert("jp", "存在しないユーザーのコメントです");
@@ -154,15 +169,27 @@ pub fn add_comment_error_messages(
     let mut comment_get_by_id_not_found = HashMap::new();
     comment_get_by_id_not_found.insert("en", "Comment not found");
     comment_get_by_id_not_found.insert("jp", "コメントが見つかりません");
-    map.insert(ErrorKey::CommentGetByIdNotFound, comment_get_by_id_not_found);
+    map.insert(
+        ErrorKey::CommentGetByIdNotFound,
+        comment_get_by_id_not_found,
+    );
 
     let mut comment_get_pagination_not_found = HashMap::new();
     comment_get_pagination_not_found.insert("en", "No comments found in the specified page");
     comment_get_pagination_not_found.insert("jp", "指定ページ内にコメントが存在しません。");
-    map.insert(ErrorKey::CommentGetPaginationNotFound, comment_get_pagination_not_found);
+    map.insert(
+        ErrorKey::CommentGetPaginationNotFound,
+        comment_get_pagination_not_found,
+    );
 
     let mut comment_get_count_failed = HashMap::new();
-    comment_get_count_failed.insert("en", "Failed to get comments count due to database operation failure");
-    comment_get_count_failed.insert("jp", "DB操作処理の問題によりコメントの数の取得に失敗しました");
+    comment_get_count_failed.insert(
+        "en",
+        "Failed to get comments count due to database operation failure",
+    );
+    comment_get_count_failed.insert(
+        "jp",
+        "DB操作処理の問題によりコメントの数の取得に失敗しました",
+    );
     map.insert(ErrorKey::CommentGetCountFailed, comment_get_count_failed);
-} 
+}

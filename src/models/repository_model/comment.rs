@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::models::repository_model::user::UserNoPassword;
+use serde::{Deserialize, Serialize};
 
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Comment {
@@ -42,7 +42,8 @@ impl CommentWithUser {
         content: String,
         created_at: i64,
         updated_at: Option<i64>,
-        user: UserNoPassword) -> Self {
+        user: UserNoPassword,
+    ) -> Self {
         Self {
             comment_id: None,
             user_id,

@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::models::repository_model::task::Task;
 use crate::models::repository_model::user::UserNoPassword;
+use serde::{Deserialize, Serialize};
 
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct TaskWithUser {
