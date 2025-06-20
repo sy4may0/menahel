@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(sqlx::FromRow, Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct Project {
     pub project_id: Option<i64>,
     pub name: String,

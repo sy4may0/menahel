@@ -4,6 +4,7 @@ pub mod errors;
 pub mod handlers;
 pub mod models;
 pub mod repository;
+pub mod client;
 
 pub fn init_logger() {
     simplelog::CombinedLogger::init(vec![simplelog::WriteLogger::new(
