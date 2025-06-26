@@ -1,6 +1,5 @@
-use crate::client::event::{AppEvent, Event};
-use crate::client::components::component::Component;
-use tokio::sync::mpsc;
+use crate::client::event::{AppEvent, Event, Tx};
+use crate::client::component::Component;
 
 use ratatui::{
     widgets::Paragraph,
@@ -9,18 +8,16 @@ use ratatui::{
     layout::Rect,
     Frame,
 };
-use color_eyre::Result;
+use anyhow::Result;
 
 pub struct ProjectName {
-    pub project_name: String,
-    pub sender: mpsc::UnboundedSender<Event>,
+    project_name: String,
 }
 
 impl ProjectName {
-    pub fn new(project_name: String, sender: mpsc::UnboundedSender<Event>) -> Self {
+    pub fn new(project_name: String) -> Self {
         Self {
             project_name,
-            sender,
         }
     }
 
@@ -31,10 +28,10 @@ impl ProjectName {
 }
 
 impl Component for ProjectName {
-    fn handle_event(&mut self, event: AppEvent) -> Result<()> {
+    fn handle_app_event(&mut self, event: &AppEvent) -> Result<()> {
         match event {
-            AppEvent::ChangeProject(project) => {
-                self.set_project_name(project.name);
+            AppEvent::SetProject(project) => {
+                self.set_project_name(project.name.clone());
                 Ok(())
             },
             _ => Ok(())

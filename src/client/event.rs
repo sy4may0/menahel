@@ -1,133 +1,104 @@
-use color_eyre::eyre::OptionExt;
-use futures::{FutureExt, StreamExt};
-use ratatui::crossterm::event::Event as CrosstermEvent;
-use std::time::Duration;
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::error::SendError;
+use std::time::Duration;
+use ratatui::crossterm::event::Event as CrosstermEvent;
+use futures::{FutureExt, StreamExt};
+use color_eyre::eyre::OptionExt;
+
 
 use crate::models::Project;
-use crate::client::components::pane::PaneId;
+use crate::client::ui::PaneId;
 
-/// The frequency at which tick events are emitted.
+
+
 const TICK_FPS: f64 = 30.0;
 
-/// Representation of all possible events.
 #[derive(Clone, Debug)]
 pub enum Event {
-    /// An event that is emitted on a regular schedule.
-    ///
-    /// Use this event to run any code which has to run outside of being a direct response to a user
-    /// event. e.g. polling exernal systems, updating animations, or rendering the UI based on a
-    /// fixed frame rate.
     Tick,
-    /// Crossterm events.
-    ///
-    /// These events are emitted by the terminal.
     Crossterm(CrosstermEvent),
-    /// Application events.
-    ///
-    /// Use this event to emit custom events that are specific to your application.
     App(AppEvent),
-    /// Command events.
-    ///
-    /// Use this event to emit custom events that are specific to your application.
-    Command(CommandEvent),
-    /// Repository events.
-    ///
-    /// Use this event to emit custom events that are specific to your application.
     Repository(RepositoryEvent),
 }
 
-/// Application events.
-///
-/// You can extend this enum with your own custom events.
 #[derive(Clone, Debug)]
 pub enum AppEvent {
     Quit,
     Error(String),
-    ErrorLog(String),
     CommandLog(String),
+    ErrorLog(String),
     FocusPane(PaneId),
-    FocusPreviousPane,
-    ChangeProject(Project), // -> RepositoryEvent::ChangeProject(String)の応答イベント
+    FocusBack,
+    ExecCommand(String),
+    SetProject(Project),
 }
 
-#[derive(Clone, Debug)]
-pub enum CommandEvent {
-    Command(String),
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug)] 
 pub enum RepositoryEvent {
-    GetProject(String),
-    UpdateRepoProject(Project),
+    RequestProject(String),
+    ResponseProject(Project),
+    Error(String),
 }
 
-/// Terminal event handler.
+#[derive(Clone, Debug)]
+pub struct Tx(mpsc::UnboundedSender<Event>);
+
+impl Tx {
+    pub fn new(sender: mpsc::UnboundedSender<Event>) -> Self {
+        Self(sender)
+    }
+
+    pub fn send(&self, ev: Event) -> Result<(), SendError<Event>> {
+        self.0.send(ev)
+    }
+
+    pub fn send_app_event(&self, event: AppEvent) -> Result<(), SendError<Event>> {
+        self.send(Event::App(event))
+    }
+
+    pub fn send_repository_event(&self, event: RepositoryEvent) -> Result<(), SendError<Event>> {
+        self.send(Event::Repository(event))
+    }
+}
+
 #[derive(Debug)]
 pub struct EventHandler {
-    /// Event sender channel.
-    pub sender: mpsc::UnboundedSender<Event>,
-    /// Event receiver channel.
-    pub receiver: mpsc::UnboundedReceiver<Event>,
+    pub sender: Tx,
+    receiver: mpsc::UnboundedReceiver<Event>,
 }
 
 impl EventHandler {
-    /// Constructs a new instance of [`EventHandler`] and spawns a new thread to handle events.
     pub fn new() -> Self {
         let (sender, receiver) = mpsc::unbounded_channel();
         let actor = EventTask::new(sender.clone());
         tokio::spawn(async { actor.run().await });
-        Self { sender, receiver }
+        Self {
+            sender: Tx::new(sender),
+            receiver,
+        }
     }
 
-    /// Receives an event from the sender.
-    ///
-    /// This function blocks until an event is received.
-    ///
-    /// # Errors
-    ///
-    /// This function returns an error if the sender channel is disconnected. This can happen if an
-    /// error occurs in the event thread. In practice, this should not happen unless there is a
-    /// problem with the underlying terminal.
+    pub fn sender(&self) -> Tx {
+        self.sender.clone()
+    }
+
     pub async fn next(&mut self) -> color_eyre::Result<Event> {
         self.receiver
             .recv()
             .await
             .ok_or_eyre("Failed to receive event")
     }
-
-    /// Queue an app event to be sent to the event receiver.
-    ///
-    /// This is useful for sending events to the event handler which will be processed by the next
-    /// iteration of the application's event loop.
-    pub fn send(&mut self, app_event: AppEvent) {
-        // Ignore the result as the reciever cannot be dropped while this struct still has a
-        // reference to it
-        let _ = self.sender.send(Event::App(app_event));
-    }
-
-    pub fn send_repository_event(&mut self, repository_event: RepositoryEvent) {
-        // Ignore the result as the reciever cannot be dropped while this struct still has a
-        // reference to it
-        let _ = self.sender.send(Event::Repository(repository_event));
-    }
 }
 
-/// A thread that handles reading crossterm events and emitting tick events on a regular schedule.
 struct EventTask {
-    /// Event sender channel.
     sender: mpsc::UnboundedSender<Event>,
 }
 
 impl EventTask {
-    /// Constructs a new instance of [`EventThread`].
     fn new(sender: mpsc::UnboundedSender<Event>) -> Self {
         Self { sender }
     }
 
-    /// Runs the event thread.
-    ///
-    /// This function emits tick events at a fixed rate and polls for crossterm events in between.
     async fn run(self) -> color_eyre::Result<()> {
         let tick_rate = Duration::from_secs_f64(1.0 / TICK_FPS);
         let mut reader = crossterm::event::EventStream::new();
@@ -150,10 +121,7 @@ impl EventTask {
         Ok(())
     }
 
-    /// Sends an event to the receiver.
     fn send(&self, event: Event) {
-        // Ignores the result because shutting down the app drops the receiver, which causes the send
-        // operation to fail. This is expected behavior and should not panic.
         let _ = self.sender.send(event);
     }
 }

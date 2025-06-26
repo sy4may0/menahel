@@ -1,11 +1,8 @@
-use tokio::sync::mpsc;
-
-use crate::client::event::{Event, CommandEvent};
+use crate::client::event::{AppEvent, Tx};
 use ratatui::crossterm::event::{KeyEvent, KeyCode};
-use color_eyre::Result;
+use anyhow::Result;
 
-use crate::client::event::AppEvent;
-use crate::client::components::component::Component;
+use crate::client::component::Component;
 use ratatui::{
     text::Line,
     style::{Style, Color, Stylize},
@@ -15,25 +12,29 @@ use ratatui::{
 };
 
 pub struct CommandTerminal {
-    sender: mpsc::UnboundedSender<Event>,
+    sender: Tx,
     command: String,
     focus: bool,
     edit_ready: bool,
+    history: Vec<String>,
+    history_index: usize,
 }
 
 impl CommandTerminal {
-    pub fn new(sender: mpsc::UnboundedSender<Event>) -> Self {
+    pub fn new(sender: Tx) -> Self {
         Self {
             sender,
             command: String::new(),
             focus: false,
             edit_ready: false,
+            history: Vec::new(),
+            history_index: 0,
         }
     }
 }
 
 impl Component for CommandTerminal {
-    fn handle_key_event(&mut self, key_event: KeyEvent) -> Result<()> {
+    fn handle_key_event(&mut self, key_event: &KeyEvent) -> Result<()> {
         match key_event.code {
             KeyCode::Char(c) => {
                 if self.edit_ready {
@@ -46,9 +47,11 @@ impl Component for CommandTerminal {
                 }
             },
             KeyCode::Enter => {
-                let _ = self.sender.send(Event::Command(CommandEvent::Command(self.command.clone())));
-                let _ = self.sender.send(Event::App(AppEvent::FocusPreviousPane));
+                self.sender.send_app_event(AppEvent::ExecCommand(self.command.clone()))?;
+                self.sender.send_app_event(AppEvent::CommandLog(self.command.clone()))?;
+                self.history.push(self.command.clone());
                 self.command = String::new();
+                self.sender.send_app_event(AppEvent::FocusBack)?;
             }
             _ => {}
         }

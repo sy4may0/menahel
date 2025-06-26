@@ -1,7 +1,7 @@
-use crate::client::components::component::Component;
+use crate::client::component::Component;
 use crate::client::components::children::command_pane::command_terminal::CommandTerminal;
 use crate::client::components::children::command_pane::log::Log;
-use crate::client::event::{Event, AppEvent};
+use crate::client::event::{AppEvent, Tx};
 use ratatui::{
     text::Line,
     style::{Style, Color},
@@ -10,22 +10,21 @@ use ratatui::{
     layout::Rect,
     Frame,
 };
-use color_eyre::Result;
-use tokio::sync::mpsc;
+use anyhow::Result;
 use crossterm::event::KeyEvent;
 
 pub struct CommandLine {
-    pub sender: mpsc::UnboundedSender<Event>,
+    pub sender: Tx,
     pub command_terminal: CommandTerminal,
     pub log: Log,
     pub focus: bool,
 }
 
 impl CommandLine {
-    pub fn new(sender: mpsc::UnboundedSender<Event>) -> Self {
+    pub fn new(sender: Tx) -> Self {
         Self { 
+            sender: sender.clone(),
             command_terminal: CommandTerminal::new(sender.clone()),
-            sender,
             log: Log::new(),
             focus: false,
         }
@@ -58,13 +57,13 @@ impl CommandLine {
 }
 
 impl Component for CommandLine {
-    fn handle_event(&mut self, event: AppEvent) -> Result<()> {
-        self.command_terminal.handle_event(event.clone())?;
-        self.log.handle_event(event.clone())?;
+    fn handle_app_event(&mut self, event: &AppEvent) -> Result<()> {
+        self.command_terminal.handle_app_event(event)?;
+        self.log.handle_app_event(event)?;
         Ok(())
     }
 
-    fn handle_key_event(&mut self, key_event: KeyEvent) -> Result<()> {
+    fn handle_key_event(&mut self, key_event: &KeyEvent) -> Result<()> {
         self.command_terminal.handle_key_event(key_event)?;
         Ok(())
     }
@@ -74,8 +73,6 @@ impl Component for CommandLine {
         self.command_terminal.set_focus(focus);
         self.log.set_focus(focus);
     }
-
-
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
         if self.focus {

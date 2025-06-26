@@ -4,55 +4,45 @@ use ratatui::{
     Frame,
     text::{Line},
     style::{Style, Color, Stylize},
+    crossterm::event::KeyEvent,
 };
-use tokio::sync::mpsc;
-use color_eyre::Result;
+use anyhow::Result;
+use crate::client::component::Component;
 
-use super::component::Component;
-use crate::client::event::{AppEvent, Event};
-use ratatui::crossterm::event::KeyEvent;
-
-
-use super::children::command_pane::command_line::CommandLine;
-use super::children::header_panes::project_name::ProjectName;
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub enum PaneId {
-    ProjectPane,
-    ProjectStatisticsPane,
-    StatusPane,
-    TaskGroupPane,
-    TaskPane,
-    CommandPane,
-}
+use crate::client::event::{
+    AppEvent,
+    Tx,
+};
+use crate::client::ui::PaneId;
 
 pub struct Pane {
     pub title: String,
-    pub sender: mpsc::UnboundedSender<Event>,
+    pub sender: Tx,
     pub child: Option<Box<dyn Component>>,
     pub focus: bool,
     pub pane_id: PaneId,
 }
 
-
 impl Pane {
-    pub fn new(title: String, sender: mpsc::UnboundedSender<Event>, initial_focus: bool, pane_id: PaneId) -> Self {
-        let child = build_child(pane_id, sender.clone());
+    pub fn new(
+        title: String, 
+        sender: Tx, 
+        initial_focus: bool,
+        pane_id: PaneId
+    ) -> Self {
         Self {
             title,
             sender,
-            child,
+            child: None,
             focus: initial_focus,
             pane_id,
         }
     }
 }
 
-fn build_child(pane_id: PaneId, sender: mpsc::UnboundedSender<Event>) -> Option<Box<dyn Component>> {
-    match pane_id {
-        PaneId::CommandPane => Some(Box::new(CommandLine::new(sender))),
-        PaneId::ProjectPane => Some(Box::new(ProjectName::new("Not Set".to_string(), sender))),
-        _ => None
+impl Pane {
+    pub fn set_child(&mut self, child: Box<dyn Component>) {
+        self.child = Some(child);
     }
 }
 
@@ -94,14 +84,25 @@ impl Component for Pane {
         Ok(())
     }
 
-    fn handle_event(&mut self, event: AppEvent) -> Result<()> {
+    fn handle_app_event(&mut self, event: &AppEvent) -> Result<()> {
+        match event {
+            AppEvent::FocusPane(pane_id) => {
+                if *pane_id == self.pane_id {
+                    self.set_focus(true);
+                } else {
+                    self.set_focus(false);
+                }
+            }
+            _ => {}
+        }
+
         if let Some(child) = &mut self.child {
-            child.handle_event(event)?;
+            child.handle_app_event(event)?;
         }
         Ok(())
     }
 
-    fn handle_key_event(&mut self, key_event: KeyEvent) -> Result<()> {
+    fn handle_key_event(&mut self, key_event: &KeyEvent) -> Result<()> {
         if let Some(child) = &mut self.child {
             child.handle_key_event(key_event)?;
         }
@@ -114,5 +115,5 @@ impl Component for Pane {
             child.set_focus(focus);
         }
     }
-
 }
+

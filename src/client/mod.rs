@@ -1,6 +1,9 @@
 pub mod app;
+pub mod api;
 pub mod event;
 pub mod components;
-pub mod command;
-pub mod api;
+pub mod component;
+pub mod ui;
+pub mod key_map;
+pub mod command_map;
 pub mod repository;

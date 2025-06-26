@@ -1,6 +1,6 @@
 use crate::client::event::AppEvent;
-use crate::client::components::component::Component;
-use color_eyre::Result;
+use crate::client::component::Component;
+use anyhow::Result;
 use ratatui::{
     text::Line,
     style::{Style, Color},
@@ -21,13 +21,13 @@ impl Log {
         Self { log: Vec::new(), focus: false }
     }
 
-    fn add_error_log(&mut self, error: String) {
+    fn add_error_log(&mut self, error: &String) {
         self.log.push(
             Line::from(format!("[ERROR] {}", error)).style(Style::new().fg(Color::Red))
         );
     }
 
-    fn add_command_log(&mut self, command: String) {
+    fn add_command_log(&mut self, command: &String) {
         self.log.push(
             Line::from(format!(": {}", command)).style(Style::new().fg(Color::White))
         );
@@ -39,7 +39,7 @@ impl Log {
 }
 
 impl Component for Log {
-    fn handle_event(&mut self, event: AppEvent) -> Result<()> {
+    fn handle_app_event(&mut self, event: &AppEvent) -> Result<()> {
         match event {
             AppEvent::ErrorLog(error) => self.add_error_log(error),
             AppEvent::CommandLog(command) => self.add_command_log(command),
